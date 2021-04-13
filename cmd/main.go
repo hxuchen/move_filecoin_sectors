@@ -11,7 +11,6 @@ import (
 
 var log = logging.Logger("main")
 
-var speedMode mv_common.SpeedMod
 var srcPathList = make([]mv_common.SrcFiles, 1)
 
 /*
