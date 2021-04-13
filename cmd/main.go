@@ -60,4 +60,19 @@ var CpCmd = &cli.Command{
 			Hidden:   false,
 		},
 	},
+
+	Action: func(cctx *cli.Context) error {
+		log.Info("start move_sector,version:%s", build.GetVersion())
+		srcPath := cctx.String("srcPath")
+		totalUsage, err := initializeSrcPathList(srcPath)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		dstPath := cctx.String("dstPath")
+		if !hasEnoughSize(totalUsage, dstPath) {
+			log.Errorf("%s has no enough space to store all files", dstPath)
+			return nil
+		}
+	},
 }

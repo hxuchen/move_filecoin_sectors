@@ -105,3 +105,12 @@ func initializeSrcPathList(srcPathFile string) (uint64, error) {
 	}
 	return totalUsage, nil
 }
+
+// check: if dst disk has enough size to store
+func hasEnoughSize(requireSize uint64, dstPath string) bool {
+	availSize, err := mv_utils.GetAvailableSize(dstPath)
+	if err != nil {
+		return false
+	}
+	return availSize > requireSize
+}

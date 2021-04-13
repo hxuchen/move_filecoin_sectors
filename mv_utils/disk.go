@@ -55,5 +55,14 @@ func GetUsedSize(path string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	return ((stat.Blocks - stat.Bavail) * uint64(stat.Bsize)) >> 30, nil
+}
+
+func GetAvailableSize(path string) (uint64, error) {
+	stat := new(syscall.Statfs_t)
+	err := syscall.Statfs(path, stat)
+	if err != nil {
+		return 0, err
+	}
 	return (stat.Bavail * uint64(stat.Bsize)) >> 30, nil
 }
