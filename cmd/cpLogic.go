@@ -17,6 +17,10 @@ import (
 	"time"
 )
 
+func startCopy() {
+
+}
+
 func copy(src, dst string, SpeedMod bool) (err error) {
 
 	if src == dst {
@@ -99,7 +103,12 @@ func initializeSrcPathList(srcPathFile string) (uint64, error) {
 		if usage, err := mv_utils.GetUsedSize(string(singlePath)); err != nil {
 			return 0, err
 		} else {
-			srcPathList = append(srcPathList, mv_common.SrcFiles{Path: string(singlePath), Usage: usage})
+			srcPathList = append(srcPathList,
+				mv_common.SrcFiles{
+					Path:     string(singlePath),
+					Usage:    usage,
+					SpeedMod: mv_common.FastMod,
+				})
 			totalUsage += usage
 		}
 	}

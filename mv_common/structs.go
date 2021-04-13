@@ -6,14 +6,8 @@
 
 package mv_common
 
-import "sync"
-
-type SpeedMod struct {
-	Lock *sync.RWMutex
-	Mod  int
-}
-
 type SrcFiles struct {
-	Path  string
-	Usage uint64
+	Path     string
+	Usage    uint64
+	SpeedMod int
 }
