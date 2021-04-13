@@ -5,6 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
 	"move_sectors/mv_common"
+	"move_sectors/mv_utils"
 	"os"
 )
 
@@ -70,7 +71,12 @@ var CpCmd = &cli.Command{
 			return nil
 		}
 		dstPath := cctx.String("dstPath")
-		if !hasEnoughSize(totalUsage, dstPath) {
+		availableSize, err := mv_utils.GetAvailableSize(dstPath)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		if availableSize < totalUsage {
 			log.Errorf("%s has no enough space to store all files", dstPath)
 			return nil
 		}
