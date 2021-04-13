@@ -4,10 +4,13 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
+	"move_sectors/mv_common"
 	"os"
 )
 
 var log = logging.Logger("main")
+
+var speedMode mv_common.SpeedMod
 
 // get mounted directories by type into a list(Support for extended types)
 func initializeMountedDirList() {
