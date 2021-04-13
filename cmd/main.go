@@ -3,6 +3,7 @@ package main
 import (
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
+	"move_sectors/build"
 	"os"
 )
 
@@ -26,6 +27,7 @@ func main() {
 	app := &cli.App{
 		Name:     "move-sectors",
 		Usage:    "copy sectors to another location",
+		Version:  build.GetVersion(),
 		Commands: cmd,
 		Flags:    nil,
 	}

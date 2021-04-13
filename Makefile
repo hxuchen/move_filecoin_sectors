@@ -7,7 +7,7 @@ unexport GOFLAGS
 
 BINS:=
 
-ldflags=-X=gitlab.abmatrix.cn/iron_huang/move_sectors/mv_utils.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
+ldflags=-X=move_sectors/build.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
 ifneq ($(strip $(LDFLAGS)),)
 	ldflags+=-extldflags=$(LDFLAGS)
 endif
