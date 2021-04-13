@@ -12,3 +12,8 @@ type SpeedMod struct {
 	Lock *sync.RWMutex
 	Mod  int
 }
+
+type SrcFiles struct {
+	Path  string
+	Usage uint64
+}

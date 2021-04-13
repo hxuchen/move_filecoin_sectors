@@ -11,11 +11,7 @@ import (
 var log = logging.Logger("main")
 
 var speedMode mv_common.SpeedMod
-
-// get mounted directories by type into a list(Support for extended types)
-func initializeMountedDirList() {
-
-}
+var srcPathList = make([]mv_common.SrcFiles, 1)
 
 /*
 	cmd include

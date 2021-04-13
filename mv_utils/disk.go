@@ -3,11 +3,11 @@ package mv_utils
 import (
 	"errors"
 	"fmt"
-	"move_sectors/mv_common"
 	logging "github.com/ipfs/go-log"
+	"move_sectors/mv_common"
+	"os"
 	"syscall"
 	"time"
-	"os"
 )
 
 var log = logging.Logger("main")
@@ -47,4 +47,13 @@ func CheckDiskSize(location string, requiredSize uint64) error {
 	case <-time.After(timeOut):
 	}
 	return err
+}
+
+func GetUsedSize(path string) (uint64, error) {
+	stat := new(syscall.Statfs_t)
+	err := syscall.Statfs(path, stat)
+	if err != nil {
+		return 0, err
+	}
+	return (stat.Bavail * uint64(stat.Bsize)) >> 30, nil
 }
