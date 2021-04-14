@@ -11,3 +11,7 @@ const (
 	NormalMod = 2
 	SlowMod   = 3
 )
+
+const (
+	NFS string = "nfs"
+)

@@ -7,11 +7,15 @@ import (
 	"move_sectors/mv_common"
 	"move_sectors/mv_utils"
 	"os"
+	"strings"
 )
 
-var log = logging.Logger("main")
-
-var srcPathList = make([]mv_common.SrcFiles, 1)
+var (
+	log         = logging.Logger("main")
+	srcPathList = make([]mv_common.SrcFiles, 1)
+	maxSpeed    int
+	srcPathType string
+)
 
 /*
 	cmd include
@@ -48,6 +52,19 @@ var CpCmd = &cli.Command{
 			Hidden:   false,
 		},
 		&cli.StringFlag{
+			Name:     "srcPathType",
+			Usage:    "special the srcPathType like nfs/ceph...",
+			Required: false,
+			Hidden:   false,
+			Value:    "nfs",
+		},
+		&cli.StringFlag{
+			Name:     "srcPath",
+			Usage:    "special the file that contains the source paths",
+			Required: true,
+			Hidden:   false,
+		},
+		&cli.StringFlag{
 			Name:     "minerIP",
 			Usage:    "special the miner address",
 			Required: true,
@@ -59,10 +76,27 @@ var CpCmd = &cli.Command{
 			Required: true,
 			Hidden:   false,
 		},
+		&cli.IntFlag{
+			Name:     "maxSpeed",
+			Usage:    "special the target location maxSpeed supported",
+			Required: false,
+			Hidden:   false,
+			Value:    5,
+		},
 	},
 
 	Action: func(cctx *cli.Context) error {
 		log.Info("start move_sector,version:%s", build.GetVersion())
+
+		if maxSpeed = cctx.Int("maxSpeed"); maxSpeed == 0 {
+			log.Error("invalid speed,can not be zero")
+			return nil
+		}
+
+		if srcPathType = cctx.String("srcPathType"); strings.ToLower(srcPathType) != mv_common.NFS {
+			log.Errorf("we can not mv this type %s of srcPath", srcPathType)
+			return nil
+		}
 
 		srcPath := cctx.String("srcPath")
 		totalUsage, err := initializeSrcPathList(srcPath)
@@ -82,6 +116,7 @@ var CpCmd = &cli.Command{
 			log.Errorf("%s has no enough space to store all files", dstPath)
 			return nil
 		}
+
 		startCopy()
 
 	},
