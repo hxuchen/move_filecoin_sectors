@@ -5,3 +5,20 @@
 **/
 
 package mv_utils
+
+import (
+	"github.com/mitchellh/go-homedir"
+	"path/filepath"
+)
+
+func GetAbsPath(p string) (string, error) {
+	newPath, err := homedir.Expand(p)
+	if err != nil {
+		return "", err
+	}
+	newPath, err = filepath.Abs(newPath)
+	if err != nil {
+		return "", err
+	}
+	return newPath, nil
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/ascii85"
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
@@ -11,10 +12,8 @@ import (
 )
 
 var (
-	log         = logging.Logger("main")
-	srcPathList = make([]mv_common.SrcFiles, 1)
-	maxSpeed    int
-	srcPathType string
+	log                   = logging.Logger("main")
+	computersMapSingleton = make(map[string]Computer)
 )
 
 /*
@@ -46,57 +45,17 @@ var CpCmd = &cli.Command{
 	Usage: "start to copy files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     "srcPath",
-			Usage:    "special the file that contains the source paths",
+			Name:     "Path",
+			Usage:    "special the config file paths",
 			Required: true,
 			Hidden:   false,
-		},
-		&cli.StringFlag{
-			Name:     "srcPathType",
-			Usage:    "special the srcPathType like nfs/ceph...",
-			Required: false,
-			Hidden:   false,
-			Value:    "nfs",
-		},
-		&cli.StringFlag{
-			Name:     "srcPath",
-			Usage:    "special the file that contains the source paths",
-			Required: true,
-			Hidden:   false,
-		},
-		&cli.StringFlag{
-			Name:     "minerIP",
-			Usage:    "special the miner address",
-			Required: true,
-			Hidden:   false,
-		},
-		&cli.StringFlag{
-			Name:     "dstPath",
-			Usage:    "special the target location",
-			Required: true,
-			Hidden:   false,
-		},
-		&cli.IntFlag{
-			Name:     "maxSpeed",
-			Usage:    "special the target location maxSpeed supported",
-			Required: false,
-			Hidden:   false,
-			Value:    5,
+			Value:    "~/mv_sectors.yaml",
 		},
 	},
 
 	Action: func(cctx *cli.Context) error {
 		log.Info("start move_sector,version:%s", build.GetVersion())
-
-		if maxSpeed = cctx.Int("maxSpeed"); maxSpeed == 0 {
-			log.Error("invalid speed,can not be zero")
-			return nil
-		}
-
-		if srcPathType = cctx.String("srcPathType"); strings.ToLower(srcPathType) != mv_common.NFS {
-			log.Errorf("we can not mv this type %s of srcPath", srcPathType)
-			return nil
-		}
+		file, err2 := LoadConfigFromFile()
 
 		srcPath := cctx.String("srcPath")
 		totalUsage, err := initializeSrcPathList(srcPath)

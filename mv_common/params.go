@@ -7,9 +7,10 @@
 package mv_common
 
 const (
-	FastMod   = 1
-	NormalMod = 2
-	SlowMod   = 3
+	FastMod   = 0
+	NormalMod = 1
+	SlowMod   = 2
+	StopMod   = 3
 )
 
 const (

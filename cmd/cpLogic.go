@@ -8,8 +8,11 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
 	"move_sectors/mv_common"
 	"move_sectors/mv_utils"
 	"os"
@@ -19,71 +22,6 @@ import (
 
 func startCopy() {
 
-}
-
-func copy(src, dst string, SpeedMod bool) (err error) {
-
-	if src == dst {
-		return nil
-	}
-	const BUFFER_SIZE = 1 * 1024 * 1024
-	buf := make([]byte, BUFFER_SIZE)
-
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err2 := source.Close()
-		if err2 != nil && err == nil {
-			err = err2
-		}
-	}()
-
-	utils_abm.MakeDirIfNotExists(path.Dir(dst))
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err2 := destination.Close()
-		if err2 != nil && err == nil {
-			err = err2
-		}
-	}()
-
-	for {
-		if stop {
-			return errors.New("stop by syscall")
-		}
-
-		n, err := source.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		if n == 0 {
-			break
-		}
-
-		if limitSpeed {
-			time.Sleep(time.Millisecond * 10)
-		}
-
-		if _, err := destination.Write(buf[:n]); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // initialize src paths
@@ -113,4 +51,18 @@ func initializeSrcPathList(srcPathFile string) (uint64, error) {
 		}
 	}
 	return totalUsage, nil
+}
+
+func initializeComputerMapSingleton(cfg *Config) error {
+	for _, v := range cfg.Computers {
+		if v.Ip == "" || v.BindWidth == 0 {
+			return errors.New("invalid computer ip or BindWidth,please check the config")
+		}
+		if computer, ok := computersMapSingleton[v.Ip]; !ok {
+			computersMapSingleton[v.Ip] = computer
+		} else {
+			return errors.New("double computer ip,please check the config")
+		}
+	}
+	return nil
 }
