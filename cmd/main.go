@@ -10,6 +10,7 @@ import (
 var (
 	log                   = logging.Logger("main")
 	computersMapSingleton = make(map[string]Computer)
+	stop                  = false
 )
 
 /*
@@ -58,7 +59,7 @@ var CpCmd = &cli.Command{
 			return nil
 		}
 
-		startCopy(&config)
-
+		start(config)
+		return nil
 	},
 }

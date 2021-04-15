@@ -95,6 +95,10 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 			return false, fmt.Errorf("has doubed src paths,%v", doubledTlist)
 		}
 
+		if t.Dst == t.Src {
+			return false, fmt.Errorf("dst: %s and src: %s should not be same", t.Dst, t.Src)
+		}
+
 		if has, err := hasEnoughSpaceToStore(t.Src, t.Dst); !has {
 			return false, err
 		}

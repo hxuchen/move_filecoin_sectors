@@ -6,6 +6,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	"move_sectors/mv_common"
 	"os"
+	"path"
 	"syscall"
 	"time"
 )
@@ -65,4 +66,28 @@ func GetAvailableSize(path string) (uint64, error) {
 		return 0, err
 	}
 	return (stat.Bavail * uint64(stat.Bsize)) >> 30, nil
+}
+
+func MakeDirIfNotExists(p string) error {
+
+	// Check if parent dir exists. If not exists, create it.
+	parentPath := path.Dir(p)
+
+	_, err := os.Stat(parentPath)
+	if err != nil && os.IsNotExist(err) {
+		err = MakeDirIfNotExists(parentPath)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	// If parent dir exists. make dir.
+	err = os.Mkdir(p, 0755)
+	if err != nil && os.IsExist(err) {
+		return nil
+	} else {
+		return err
+	}
 }
