@@ -1,14 +1,10 @@
 package main
 
 import (
-	"encoding/ascii85"
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
-	"move_sectors/mv_common"
-	"move_sectors/mv_utils"
 	"os"
-	"strings"
 )
 
 var (
@@ -41,7 +37,7 @@ func main() {
 }
 
 var CpCmd = &cli.Command{
-	Name:  "copy",
+	Name:  "run",
 	Usage: "start to copy files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -55,24 +51,10 @@ var CpCmd = &cli.Command{
 
 	Action: func(cctx *cli.Context) error {
 		log.Info("start move_sector,version:%s", build.GetVersion())
-		file, err2 := LoadConfigFromFile()
 
-		srcPath := cctx.String("srcPath")
-		totalUsage, err := initializeSrcPathList(srcPath)
+		config, err := getConfig(cctx)
 		if err != nil {
 			log.Error(err)
-			return nil
-		}
-
-		dstPath := cctx.String("dstPath")
-		availableSize, err := mv_utils.GetAvailableSize(dstPath)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-
-		if availableSize < totalUsage {
-			log.Errorf("%s has no enough space to store all files", dstPath)
 			return nil
 		}
 

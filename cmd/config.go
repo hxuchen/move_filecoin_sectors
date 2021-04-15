@@ -7,7 +7,6 @@
 package main
 
 import (
-	"debug/macho"
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
@@ -40,17 +39,20 @@ type CpTask struct {
 	Dst   string
 }
 
-func getConfig(cctx *cli.Context) (*Config, []string, error) {
+func getConfig(cctx *cli.Context) (*Config, error) {
 	configFilePath := cctx.String("path")
 	configFilePath, err := mv_utils.GetAbsPath(configFilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	config, err := LoadConfigFromFile(configFilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
+	if qualifiedConfig, err := isQualifiedConfig(config); !qualifiedConfig {
+		return nil, fmt.Errorf("config file: %v error:%v", configFilePath, err)
+	}
+	return config, nil
 }
 
 func LoadConfigFromFile(filePath string) (*Config, error) {
