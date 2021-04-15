@@ -58,7 +58,7 @@ var CpCmd = &cli.Command{
 			return nil
 		}
 
-		startCopy()
+		startCopy(&config)
 
 	},
 }

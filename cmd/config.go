@@ -79,10 +79,22 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 	if len(cfg.CpTasks) == 0 {
 		return false, fmt.Errorf("has no task todo")
 	}
+	tMap := make(map[string]struct{})
+	doubledTlist := make([]CpTask, 0)
 	for _, t := range cfg.CpTasks {
 		if t.Dst == "" || t.DstIp == "" || t.Src == "" || t.SrcIp == "" || t.Dst == t.Src {
 			return false, fmt.Errorf("invalid task config:%v", t)
 		}
+
+		if _, ok := tMap[t.SrcIp]; ok {
+			doubledTlist = append(doubledTlist, t)
+		} else {
+			tMap[t.SrcIp] = struct{}{}
+		}
+		if len(doubledTlist) > 0 {
+			return false, fmt.Errorf("has doubed src paths,%v", doubledTlist)
+		}
+
 		if has, err := hasEnoughSpaceToStore(t.Src, t.Dst); !has {
 			return false, err
 		}
