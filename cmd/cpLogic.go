@@ -114,6 +114,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		})
 
 		computersMapSingleton.CLock.Lock()
+		defer computersMapSingleton.CLock.Unlock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
 		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
@@ -121,15 +122,14 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		computersMapSingleton.CMap[task.DstIp] = *dstComputer
 
 		workingTasks.WLock.Lock()
+		defer workingTasks.WLock.Unlock()
 		delete(workingTasks.Tasks, task.Src)
 		log.Infof("working task remain: %d", len(workingTasks.Tasks))
-		workingTasks.WLock.Unlock()
 
-		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
-		computersMapSingleton.CLock.Unlock()
-		log.Infof("task: %v done", task)
 		if err != nil {
 			log.Errorf("task %v done with error: %v", task, err)
+		} else {
+			log.Infof("task: %v done", task)
 		}
 	} else {
 		dst := strings.Replace(task.Src, path.Dir(task.Src), task.Dst, 1)
@@ -148,24 +148,25 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			return
 		}
 		err = copy(task.Src, dst, singleThreadMBPS)
-
+		if err != nil {
+			log.Errorf("task %v done with error: %v", task, err)
+		}
 		computersMapSingleton.CLock.Lock()
+		defer computersMapSingleton.CLock.Unlock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
 		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 		computersMapSingleton.CMap[task.SrcIp] = *srcComputer
 		computersMapSingleton.CMap[task.DstIp] = *dstComputer
-		computersMapSingleton.CLock.Unlock()
 
 		workingTasks.WLock.Lock()
+		defer workingTasks.WLock.Unlock()
 		delete(workingTasks.Tasks, task.Src)
 		log.Infof("working task remain: %d", len(workingTasks.Tasks))
-		workingTasks.WLock.Unlock()
-
-		if err != nil {
-			log.Errorf("task %v done with error: %v", task, err)
-			return
+		if err == nil {
+			log.Infof("task: %v done", task)
 		}
+		return
 	}
 
 }
