@@ -68,6 +68,7 @@ var CpCmd = &cli.Command{
 				stop = true
 			}
 		}()
+		log.Info("start to copy")
 		start(config)
 		log.Info("mv_sectors exited")
 		return nil

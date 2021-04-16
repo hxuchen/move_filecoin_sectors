@@ -69,6 +69,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 }
 
 func copyGo(task CpTask, copyCycleDelay int) {
+	log.Info("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
 		log.Error(err)
