@@ -24,6 +24,7 @@ type Config struct {
 type Computer struct {
 	Ip             string
 	BindWidth      int
+	LimitThread    int
 	CurrentThreads int
 }
 

@@ -9,7 +9,7 @@ import (
 
 var (
 	log                   = logging.Logger("main")
-	computersMapSingleton = make(map[string]Computer)
+	computersMapSingleton ComputersMap
 	stop                  = false
 )
 

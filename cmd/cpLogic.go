@@ -19,6 +19,12 @@ import (
 
 func start(cfg *Config) {
 	for _, task := range cfg.CpTasks {
+		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
+		if canGo(&srcComputer, &dstComputer) {
+			// thread ++
+			srcComputer.CurrentThreads++
+			dstComputer.CurrentThreads++
+		}
 		copyGo(task)
 	}
 }
@@ -28,8 +34,10 @@ func initializeComputerMapSingleton(cfg *Config) error {
 		if v.Ip == "" || v.BindWidth == 0 {
 			return errors.New("invalid computer ip or BindWidth,please check the config")
 		}
-		if computer, ok := computersMapSingleton[v.Ip]; !ok {
-			computersMapSingleton[v.Ip] = computer
+		if computer, ok := computersMapSingleton.CMap[v.Ip]; !ok {
+			computer.LimitThread = calThreadLimit(computer.BindWidth, cfg.SingleThreadMBPS)
+			computersMapSingleton.CMap[v.Ip] = computer
+
 		} else {
 			return errors.New("double computer ip,please check the config")
 		}
