@@ -48,6 +48,7 @@ ForTasks:
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
+			log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 			computersMapSingleton.CLock.Unlock()
 			time.Sleep(time.Second * 1)
 		case <-stopSignal:
@@ -101,7 +102,17 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				log.Error(err)
 				return err
 			}
-			err = copy(task, path, dst, singleThreadMBPS, srcComputer, dstComputer)
+			err = copy(task, path, dst, singleThreadMBPS)
+			workingTasks.WLock.Lock()
+			delete(workingTasks.Tasks, task.Src)
+			workingTasks.WLock.Unlock()
+
+			computersMapSingleton.CLock.Lock()
+			srcComputer.CurrentThreads--
+			dstComputer.CurrentThreads--
+			log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
+			computersMapSingleton.CLock.Unlock()
+
 			if err != nil {
 				log.Error(err)
 				return err
@@ -123,7 +134,16 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			log.Error(err)
 			return
 		}
-		err = copy(task, task.Src, dst, singleThreadMBPS, srcComputer, dstComputer)
+		err = copy(task, task.Src, dst, singleThreadMBPS)
+		workingTasks.WLock.Lock()
+		delete(workingTasks.Tasks, task.Src)
+		workingTasks.WLock.Unlock()
+
+		computersMapSingleton.CLock.Lock()
+		srcComputer.CurrentThreads--
+		dstComputer.CurrentThreads--
+		computersMapSingleton.CLock.Unlock()
+
 		if err != nil {
 			log.Error(err)
 			return
@@ -136,7 +156,7 @@ func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(task CpTask, src, dst string, singleThreadMBPS int, srcComputer, dstComputer *Computer) (err error) {
+func copy(task CpTask, src, dst string, singleThreadMBPS int) (err error) {
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 
@@ -174,9 +194,6 @@ func copy(task CpTask, src, dst string, singleThreadMBPS int, srcComputer, dstCo
 	readed := 0
 	for {
 		if stop {
-			workingTasks.WLock.Lock()
-			delete(workingTasks.Tasks, task.Src)
-			workingTasks.WLock.Unlock()
 			return errors.New("stop by syscall")
 		}
 
@@ -199,15 +216,6 @@ func copy(task CpTask, src, dst string, singleThreadMBPS int, srcComputer, dstCo
 			time.Sleep(time.Second * 1)
 		}
 	}
-
-	workingTasks.WLock.Lock()
-	delete(workingTasks.Tasks, task.Src)
-	workingTasks.WLock.Unlock()
-
-	computersMapSingleton.CLock.Lock()
-	srcComputer.CurrentThreads--
-	dstComputer.CurrentThreads--
-	computersMapSingleton.CLock.Unlock()
 
 	return nil
 }
