@@ -23,7 +23,7 @@ type Config struct {
 
 type Computer struct {
 	Ip             string
-	BindWidth      int
+	BandWidth      int
 	LimitThread    int
 	CurrentThreads int
 }

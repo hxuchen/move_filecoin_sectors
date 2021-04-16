@@ -41,7 +41,7 @@ func start(cfg *Config) {
 			dstComputer.CurrentThreads++
 			computersMapSingleton.CLock.Unlock()
 			workingTasks.TaskList = append(workingTasks.TaskList, &task)
-			copyCycleDelay := calCopyCycleDelay(srcComputer.BindWidth, cfg.SingleThreadMBPS)
+			copyCycleDelay := calCopyCycleDelay(srcComputer.BandWidth, cfg.SingleThreadMBPS)
 			go copyGo(task, copyCycleDelay)
 			time.Sleep(time.Second * 1)
 		case <-stopSignal:
@@ -53,11 +53,11 @@ func start(cfg *Config) {
 
 func initializeComputerMapSingleton(cfg *Config) error {
 	for _, v := range cfg.Computers {
-		if v.Ip == "" || v.BindWidth == 0 {
-			return errors.New("invalid computer ip or BindWidth,please check the config")
+		if v.Ip == "" || v.BandWidth == 0 {
+			return errors.New("invalid computer ip or BandWidth,please check the config")
 		}
 		if computer, ok := computersMapSingleton.CMap[v.Ip]; !ok {
-			computer.LimitThread = calThreadLimit(computer.BindWidth, cfg.SingleThreadMBPS)
+			computer.LimitThread = calThreadLimit(computer.BandWidth, cfg.SingleThreadMBPS)
 			computersMapSingleton.CMap[v.Ip] = computer
 
 		} else {
