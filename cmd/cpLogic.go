@@ -22,43 +22,49 @@ import (
 )
 
 type WorkingTasks struct {
-	TaskList []*CpTask
-	WLock    *sync.Mutex
+	Tasks map[string]CpTask
+	WLock *sync.Mutex
 }
 
-var workingTasks = new(WorkingTasks)
+var workingTasks = WorkingTasks{
+	Tasks: make(map[string]CpTask, 0),
+	WLock: new(sync.Mutex),
+}
 
 func start(cfg *Config) {
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+ForTasks:
 	for _, task := range cfg.CpTasks {
-		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
+		if stop {
+			break
+		}
+		srcComputer := computersMapSingleton.CMap[task.SrcIp]
+		dstComputer := computersMapSingleton.CMap[task.DstIp]
 		select {
 		case <-canGo(&srcComputer, &dstComputer):
 			// thread ++
-			computersMapSingleton.CLock.Lock()
-			srcComputer.CurrentThreads++
-			dstComputer.CurrentThreads++
-			computersMapSingleton.CLock.Unlock()
-			workingTasks.TaskList = append(workingTasks.TaskList, &task)
-			copyCycleDelay := calCopyCycleDelay(srcComputer.BindWidth, cfg.SingleThreadMBPS)
-			go copyGo(task, copyCycleDelay)
+			workingTasks.Tasks[task.Src] = task
+			go copyGo(task, cfg.SingleThreadMBPS, &srcComputer, &dstComputer)
+
+			addThread(srcComputer, dstComputer, task)
+
 			time.Sleep(time.Second * 1)
 		case <-stopSignal:
-			waitingForTasksThreadsStop()
-			break
+			break ForTasks
 		}
 	}
+	waitingForTasksThreadsStop()
 }
 
 func initializeComputerMapSingleton(cfg *Config) error {
 	for _, v := range cfg.Computers {
-		if v.Ip == "" || v.BindWidth == 0 {
-			return errors.New("invalid computer ip or BindWidth,please check the config")
+		if v.Ip == "" || v.BandWidth == 0 {
+			return errors.New("invalid computer ip or BandWidth,please check the config")
 		}
-		if computer, ok := computersMapSingleton.CMap[v.Ip]; !ok {
-			computer.LimitThread = calThreadLimit(computer.BindWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = computer
+		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
+			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
+			computersMapSingleton.CMap[v.Ip] = v
 
 		} else {
 			return errors.New("double computer ip,please check the config")
@@ -67,39 +73,107 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task CpTask, copyCycleDelay int) {
-	_ = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
-		if err != nil || srcF == nil {
-			return err
+func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer) {
+	log.Infof("start to do task %v", task)
+	stat, err := os.Stat(task.Src)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if stat.IsDir() {
+		err = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
+			if err != nil || srcF == nil {
+				log.Error(err)
+				return err
+			}
+
+			if !srcF.IsDir() && srcF.Size() == 0 {
+				minusThread(srcComputer, dstComputer, task)
+				delWorkingTasks(task)
+				return err
+			}
+
+			dst := getFinalDst(task.Src, path, task.Dst)
+			dstF, err := os.Stat(dst)
+			if err == nil && !dstF.IsDir() {
+				srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
+				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+				if srcSha256 == dstSha256 {
+					minusThread(srcComputer, dstComputer, task)
+					delWorkingTasks(task)
+					log.Infof("src file: %s already existed in dst %s,task done", task.Src, task.Dst)
+					return nil
+				}
+			}
+			err = mv_utils.MakeDirIfNotExists(dst)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			err = copy(path, dst, singleThreadMBPS)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			return nil
+		})
+
+		minusThread(srcComputer, dstComputer, task)
+
+		delWorkingTasks(task)
+
+		if err != nil {
+			log.Errorf("task %v done with error: %v", task, err)
+		} else {
+			log.Infof("task: %v done", task)
 		}
-		dst := getFinalDst(task.Src, path, task.Dst)
+	} else {
+		if stat.Size() == 0 {
+			minusThread(srcComputer, dstComputer, task)
+			delWorkingTasks(task)
+			return
+		}
+		dst := strings.Replace(task.Src, path.Dir(task.Src), task.Dst, 1)
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
-			srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
+			srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 			dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 			if srcSha256 == dstSha256 {
-				return nil
+				minusThread(srcComputer, dstComputer, task)
+				delWorkingTasks(task)
+				log.Infof("src file: %s already existed in dst %s,task done", task.Src, task.Dst)
+				return
 			}
 		}
-		err = mv_utils.MakeDirIfNotExists(dst)
+		err = mv_utils.MakeDirIfNotExists(path.Dir(dst))
 		if err != nil {
-			return err
+			log.Error(err)
+			return
 		}
-		err = copy(path, dst, copyCycleDelay)
+		err = copy(task.Src, dst, singleThreadMBPS)
 		if err != nil {
-			return err
+			log.Errorf("task %v done with error: %v", task, err)
 		}
-		return nil
-	})
+
+		minusThread(srcComputer, dstComputer, task)
+
+		delWorkingTasks(task)
+
+		if err == nil {
+			log.Infof("task: %v done", task)
+		}
+		return
+	}
+
 }
 
 func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(src, dst string, copyCycleDelay int) (err error) {
-	const BUFFER_SIZE = 1 * 1024 * 1024
-	buf := make([]byte, BUFFER_SIZE)
+func copy(src, dst string, singleThreadMBPS int) (err error) {
+	const BufferSize = 1 * 1024 * 1024
+	buf := make([]byte, BufferSize)
 
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
@@ -132,7 +206,7 @@ func copy(src, dst string, copyCycleDelay int) (err error) {
 			err = err2
 		}
 	}()
-
+	readed := 0
 	for {
 		if stop {
 			return errors.New("stop by syscall")
@@ -146,20 +220,53 @@ func copy(src, dst string, copyCycleDelay int) (err error) {
 			break
 		}
 
-		// 限速
-		time.Sleep(time.Second * time.Duration(copyCycleDelay))
 		if _, err := destination.Write(buf[:n]); err != nil {
 			return err
 		}
+
+		// 限速
+		readed += len(buf)
+		if readed >= (singleThreadMBPS << 20) {
+			readed = 0
+			time.Sleep(time.Second * 1)
+		}
 	}
 
-	return nil
+	return
 }
 
 func waitingForTasksThreadsStop() {
 	for {
-		if len(workingTasks.TaskList) == 0 {
+		if len(workingTasks.Tasks) == 0 {
 			break
 		}
+		time.Sleep(time.Second * 1)
 	}
+}
+
+func addThread(srcComputer, dstComputer Computer, task CpTask) {
+	computersMapSingleton.CLock.Lock()
+	defer computersMapSingleton.CLock.Unlock()
+	srcComputer.CurrentThreads++
+	dstComputer.CurrentThreads++
+	computersMapSingleton.CMap[task.SrcIp] = srcComputer
+	computersMapSingleton.CMap[task.DstIp] = dstComputer
+	log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
+}
+
+func minusThread(srcComputer, dstComputer *Computer, task CpTask) {
+	computersMapSingleton.CLock.Lock()
+	defer computersMapSingleton.CLock.Unlock()
+	srcComputer.CurrentThreads--
+	dstComputer.CurrentThreads--
+	log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
+	computersMapSingleton.CMap[task.SrcIp] = *srcComputer
+	computersMapSingleton.CMap[task.DstIp] = *dstComputer
+}
+
+func delWorkingTasks(task CpTask) {
+	workingTasks.WLock.Lock()
+	defer workingTasks.WLock.Unlock()
+	delete(workingTasks.Tasks, task.Src)
+	log.Infof("working task remain: %d", len(workingTasks.Tasks))
 }

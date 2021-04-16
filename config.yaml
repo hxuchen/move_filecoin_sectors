@@ -1,11 +1,59 @@
 computers:
-  - ip: 192.168.97.91
-    bandwidth: 1  #GB/s
+  - ip: 192.168.32.52
+    bindwidth: 1
     limitthreads: 0
-    currentthreads: 1
+    currentthreads: 0
+  - ip: 192.168.99.250
+    bindwidth: 1
+    limitthreads: 0
+    currentthreads: 0
+  - ip: 192.168.99.210
+    bindwidth: 1
+    limitthreads: 0
+    currentthreads: 0
 tasks:
-  - srcip: 192.168.97.91
-    src: /mnt
-    dstip: 192.168.92.92
-    dst: /mnt/data
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/cache
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/cache
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-1666
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40504
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40505
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40506
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40508
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40509
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40510
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40514
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40515
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-40516
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
 singlethreadmbps: 50 # MB/s

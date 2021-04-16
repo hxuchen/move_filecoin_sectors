@@ -15,7 +15,7 @@ endif
 GOFLAGS+=-ldflags="-s -w $(ldflags)"
 
 move_sectors:
-	rm -f lotus-gateway
+	rm -f move_sectors
 	go build $(GOFLAGS) -o move_sectors ./cmd
 .PHONY: move_sectors
 BINS+=move_sectors

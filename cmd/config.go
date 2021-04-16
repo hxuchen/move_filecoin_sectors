@@ -23,7 +23,7 @@ type Config struct {
 
 type Computer struct {
 	Ip             string
-	BindWidth      int
+	BandWidth      int
 	LimitThread    int
 	CurrentThreads int
 }
@@ -87,7 +87,7 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 			return false, fmt.Errorf("invalid task config:%v", t)
 		}
 
-		if _, ok := tMap[t.SrcIp]; ok {
+		if _, ok := tMap[t.Src]; ok {
 			doubledTlist = append(doubledTlist, t)
 		} else {
 			tMap[t.SrcIp] = struct{}{}
@@ -111,13 +111,13 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 }
 
 func hasEnoughSpaceToStore(src, dst string) (bool, error) {
-	srcSize, err := mv_utils.GetUsedSize(src)
+	srcSize, err := mv_utils.GetSrcSize(src)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("src path: %s %v", src, err)
 	}
 	availableSize, err := mv_utils.GetAvailableSize(dst)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("dst path: %s %v", dst, err)
 	}
 	if availableSize <= srcSize {
 		return false, fmt.Errorf("dst: %s has no enough space to store all files from %s", dst, src)
