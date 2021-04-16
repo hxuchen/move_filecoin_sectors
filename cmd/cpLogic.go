@@ -268,5 +268,5 @@ func delWorkingTasks(task CpTask) {
 	workingTasks.WLock.Lock()
 	defer workingTasks.WLock.Unlock()
 	delete(workingTasks.Tasks, task.Src)
-	log.Infof("working task remain: %d；%v", len(workingTasks.Tasks), workingTasks.Tasks)
+	log.Infof("working task remain: %d", len(workingTasks.Tasks))
 }

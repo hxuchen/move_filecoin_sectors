@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
 	"github.com/filecoin-project/lotus/lib/lotuslog"
+	fslock "github.com/ipfs/go-fs-lock"
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/xerrors"
+	"io"
 	"move_sectors/build"
 	"os"
 	"os/signal"
@@ -61,6 +65,17 @@ var CpCmd = &cli.Command{
 
 	Action: func(cctx *cli.Context) error {
 		log.Infof("start move_sector,version:%s", build.GetVersion())
+		lock, err2 := createFileLock(os.TempDir(), "move_sectors.lock")
+		if err2 != nil {
+			log.Error(err2)
+			return err2
+		}
+
+		if lock != nil {
+			defer lock.Close()
+		} else {
+			return errors.New("create file lock failed")
+		}
 
 		config, err := getConfig(cctx)
 		if err != nil {
@@ -80,4 +95,21 @@ var CpCmd = &cli.Command{
 		log.Info("mv_sectors exited")
 		return nil
 	},
+}
+
+//Check scheduler process if exist
+func createFileLock(confDir, lockFileName string) (io.Closer, error) {
+	locked, err := fslock.Locked(confDir, lockFileName)
+	if err != nil {
+		return nil, xerrors.Errorf("could not check lock status: %w", err)
+	}
+	if locked {
+		return nil, errors.New("program is already running")
+	}
+
+	closer, err := fslock.Lock(confDir, lockFileName)
+	if err != nil {
+		return nil, xerrors.Errorf("could not lock the repo: %w", err)
+	}
+	return closer, nil
 }
