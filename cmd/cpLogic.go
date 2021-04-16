@@ -22,18 +22,19 @@ import (
 )
 
 type WorkingTasks struct {
-	Tasks map[string]*CpTask
+	Tasks map[string]CpTask
 	WLock *sync.Mutex
 }
 
 var workingTasks = WorkingTasks{
-	Tasks: make(map[string]*CpTask, 0),
+	Tasks: make(map[string]CpTask, 0),
 	WLock: new(sync.Mutex),
 }
 
 func start(cfg *Config) {
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+ForTasks:
 	for _, task := range cfg.CpTasks {
 		if stop {
 			break
@@ -42,16 +43,15 @@ func start(cfg *Config) {
 		select {
 		case <-canGo(srcComputer, dstComputer):
 			// thread ++
-			workingTasks.Tasks[task.Src] = &task
-			go copyGo(&task, cfg.SingleThreadMBPS)
+			workingTasks.Tasks[task.Src] = task
+			go copyGo(task, cfg.SingleThreadMBPS, srcComputer, dstComputer)
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
 			computersMapSingleton.CLock.Unlock()
 			time.Sleep(time.Second * 1)
-			//case <-stopSignal:
-			//	waitingForTasksThreadsStop()
-			//	break
+		case <-stopSignal:
+			break ForTasks
 		}
 	}
 	waitingForTasksThreadsStop()
@@ -64,7 +64,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 		}
 		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
 			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = v
+			computersMapSingleton.CMap[v.Ip] = &v
 
 		} else {
 			return errors.New("double computer ip,please check the config")
@@ -73,7 +73,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task *CpTask, singleThreadMBPS int) {
+func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer) {
 	log.Infof("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
@@ -101,7 +101,7 @@ func copyGo(task *CpTask, singleThreadMBPS int) {
 				log.Error(err)
 				return err
 			}
-			err = copy(task, path, dst, singleThreadMBPS)
+			err = copy(task, path, dst, singleThreadMBPS, srcComputer, dstComputer)
 			if err != nil {
 				log.Error(err)
 				return err
@@ -123,7 +123,7 @@ func copyGo(task *CpTask, singleThreadMBPS int) {
 			log.Error(err)
 			return
 		}
-		err = copy(task, task.Src, dst, singleThreadMBPS)
+		err = copy(task, task.Src, dst, singleThreadMBPS, srcComputer, dstComputer)
 		if err != nil {
 			log.Error(err)
 			return
@@ -136,9 +136,9 @@ func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(task *CpTask, src, dst string, singleThreadMBPS int) (err error) {
-	const BUFFER_SIZE = 1 * 1024 * 1024
-	buf := make([]byte, BUFFER_SIZE)
+func copy(task CpTask, src, dst string, singleThreadMBPS int, srcComputer, dstComputer *Computer) (err error) {
+	const BufferSize = 1 * 1024 * 1024
+	buf := make([]byte, BufferSize)
 
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
@@ -199,9 +199,16 @@ func copy(task *CpTask, src, dst string, singleThreadMBPS int) (err error) {
 			time.Sleep(time.Second * 1)
 		}
 	}
+
 	workingTasks.WLock.Lock()
 	delete(workingTasks.Tasks, task.Src)
 	workingTasks.WLock.Unlock()
+
+	computersMapSingleton.CLock.Lock()
+	srcComputer.CurrentThreads--
+	dstComputer.CurrentThreads--
+	computersMapSingleton.CLock.Unlock()
+
 	return nil
 }
 

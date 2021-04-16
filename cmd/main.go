@@ -14,7 +14,7 @@ import (
 var (
 	log                   = logging.Logger("main")
 	computersMapSingleton = ComputersMap{
-		CMap:  make(map[string]Computer),
+		CMap:  make(map[string]*Computer),
 		CLock: new(sync.Mutex),
 	}
 	stop = false
