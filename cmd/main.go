@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/filecoin-project/lotus/lib/lotuslog"
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
@@ -22,6 +23,8 @@ var (
 		--minerIP special the miner address
 */
 func main() {
+	lotuslog.SetupLogLevels()
+
 	cmd := []*cli.Command{
 		CpCmd,
 	}
