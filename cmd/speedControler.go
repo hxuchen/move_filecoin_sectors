@@ -24,6 +24,6 @@ func canGo(srcComputer, dstComputer Computer) chan struct{} {
 	return ok
 }
 
-func calCopyCycleDelay(bindWidth, singleThreadMBPS int) int {
-	return bindWidth << 10 / singleThreadMBPS
-}
+//func calCopyCycleDelay(bindWidth, singleThreadMBPS int) int {
+//	return bindWidth << 10 / singleThreadMBPS
+//}

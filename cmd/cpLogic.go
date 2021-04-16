@@ -34,25 +34,24 @@ var workingTasks = WorkingTasks{
 func start(cfg *Config) {
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
-	defer func() {
-		//computersMapSingleton.CLock.Unlock()
-	}()
 	for _, task := range cfg.CpTasks {
+		if stop {
+			break
+		}
 		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
 		select {
 		case <-canGo(srcComputer, dstComputer):
 			// thread ++
 			workingTasks.Tasks[task.Src] = &task
-			copyCycleDelay := calCopyCycleDelay(srcComputer.BandWidth, cfg.SingleThreadMBPS)
-			go copyGo(&task, copyCycleDelay)
+			go copyGo(&task, cfg.SingleThreadMBPS)
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
 			computersMapSingleton.CLock.Unlock()
 			time.Sleep(time.Second * 1)
-		case <-stopSignal:
-			waitingForTasksThreadsStop()
-			break
+			//case <-stopSignal:
+			//	waitingForTasksThreadsStop()
+			//	break
 		}
 	}
 	waitingForTasksThreadsStop()
@@ -74,8 +73,8 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task *CpTask, copyCycleDelay int) {
-	log.Info("start to do task %v", task)
+func copyGo(task *CpTask, singleThreadMBPS int) {
+	log.Infof("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
 		log.Error(err)
@@ -102,7 +101,7 @@ func copyGo(task *CpTask, copyCycleDelay int) {
 				log.Error(err)
 				return err
 			}
-			err = copy(task, path, dst, copyCycleDelay)
+			err = copy(task, path, dst, singleThreadMBPS)
 			if err != nil {
 				log.Error(err)
 				return err
@@ -124,7 +123,7 @@ func copyGo(task *CpTask, copyCycleDelay int) {
 			log.Error(err)
 			return
 		}
-		err = copy(task, task.Src, dst, copyCycleDelay)
+		err = copy(task, task.Src, dst, singleThreadMBPS)
 		if err != nil {
 			log.Error(err)
 			return
@@ -137,7 +136,7 @@ func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(task *CpTask, src, dst string, copyCycleDelay int) (err error) {
+func copy(task *CpTask, src, dst string, singleThreadMBPS int) (err error) {
 	const BUFFER_SIZE = 1 * 1024 * 1024
 	buf := make([]byte, BUFFER_SIZE)
 
@@ -172,7 +171,7 @@ func copy(task *CpTask, src, dst string, copyCycleDelay int) (err error) {
 			err = err2
 		}
 	}()
-
+	readed := 0
 	for {
 		if stop {
 			workingTasks.WLock.Lock()
@@ -189,10 +188,15 @@ func copy(task *CpTask, src, dst string, copyCycleDelay int) (err error) {
 			break
 		}
 
-		// 限速
-		time.Sleep(time.Second * time.Duration(copyCycleDelay))
 		if _, err := destination.Write(buf[:n]); err != nil {
 			return err
+		}
+
+		// 限速
+		readed += len(buf)
+		if readed >= (singleThreadMBPS << 20) {
+			readed = 0
+			time.Sleep(time.Second * 1)
 		}
 	}
 	workingTasks.WLock.Lock()
@@ -204,6 +208,7 @@ func copy(task *CpTask, src, dst string, copyCycleDelay int) (err error) {
 func waitingForTasksThreadsStop() {
 	for {
 		if len(workingTasks.Tasks) == 0 {
+			time.Sleep(time.Second * 1)
 			break
 		}
 	}
