@@ -22,44 +22,50 @@ import (
 )
 
 type WorkingTasks struct {
-	TaskList []*CpTask
-	WLock    *sync.Mutex
+	Tasks map[string]*CpTask
+	WLock *sync.Mutex
 }
 
-var workingTasks = new(WorkingTasks)
+var workingTasks = WorkingTasks{
+	Tasks: make(map[string]*CpTask, 0),
+	WLock: new(sync.Mutex),
+}
 
 func start(cfg *Config) {
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+	defer func() {
+		//computersMapSingleton.CLock.Unlock()
+	}()
 	for _, task := range cfg.CpTasks {
 		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
 		select {
-		case <-canGo(&srcComputer, &dstComputer):
+		case <-canGo(srcComputer, dstComputer):
 			// thread ++
+			workingTasks.Tasks[task.Src] = &task
+			copyCycleDelay := calCopyCycleDelay(srcComputer.BandWidth, cfg.SingleThreadMBPS)
+			go copyGo(&task, copyCycleDelay)
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
 			computersMapSingleton.CLock.Unlock()
-			workingTasks.TaskList = append(workingTasks.TaskList, &task)
-			copyCycleDelay := calCopyCycleDelay(srcComputer.BandWidth, cfg.SingleThreadMBPS)
-			go copyGo(task, copyCycleDelay)
 			time.Sleep(time.Second * 1)
 		case <-stopSignal:
 			waitingForTasksThreadsStop()
 			break
 		}
 	}
+	waitingForTasksThreadsStop()
 }
 
 func initializeComputerMapSingleton(cfg *Config) error {
-	computersMapSingleton.CMap = make(map[string]Computer)
 	for _, v := range cfg.Computers {
 		if v.Ip == "" || v.BandWidth == 0 {
 			return errors.New("invalid computer ip or BandWidth,please check the config")
 		}
-		if computer, ok := computersMapSingleton.CMap[v.Ip]; !ok {
-			computer.LimitThread = calThreadLimit(computer.BandWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = computer
+		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
+			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
+			computersMapSingleton.CMap[v.Ip] = v
 
 		} else {
 			return errors.New("double computer ip,please check the config")
@@ -68,7 +74,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task CpTask, copyCycleDelay int) {
+func copyGo(task *CpTask, copyCycleDelay int) {
 	log.Info("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
@@ -96,7 +102,7 @@ func copyGo(task CpTask, copyCycleDelay int) {
 				log.Error(err)
 				return err
 			}
-			err = copy(path, dst, copyCycleDelay)
+			err = copy(task, path, dst, copyCycleDelay)
 			if err != nil {
 				log.Error(err)
 				return err
@@ -113,12 +119,12 @@ func copyGo(task CpTask, copyCycleDelay int) {
 				return
 			}
 		}
-		err = mv_utils.MakeDirIfNotExists(dst)
+		err = mv_utils.MakeDirIfNotExists(path.Dir(dst))
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		err = copy(task.Src, dst, copyCycleDelay)
+		err = copy(task, task.Src, dst, copyCycleDelay)
 		if err != nil {
 			log.Error(err)
 			return
@@ -131,7 +137,7 @@ func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(src, dst string, copyCycleDelay int) (err error) {
+func copy(task *CpTask, src, dst string, copyCycleDelay int) (err error) {
 	const BUFFER_SIZE = 1 * 1024 * 1024
 	buf := make([]byte, BUFFER_SIZE)
 
@@ -169,6 +175,9 @@ func copy(src, dst string, copyCycleDelay int) (err error) {
 
 	for {
 		if stop {
+			workingTasks.WLock.Lock()
+			delete(workingTasks.Tasks, task.Src)
+			workingTasks.WLock.Unlock()
 			return errors.New("stop by syscall")
 		}
 
@@ -186,13 +195,15 @@ func copy(src, dst string, copyCycleDelay int) (err error) {
 			return err
 		}
 	}
-
+	workingTasks.WLock.Lock()
+	delete(workingTasks.Tasks, task.Src)
+	workingTasks.WLock.Unlock()
 	return nil
 }
 
 func waitingForTasksThreadsStop() {
 	for {
-		if len(workingTasks.TaskList) == 0 {
+		if len(workingTasks.Tasks) == 0 {
 			break
 		}
 	}

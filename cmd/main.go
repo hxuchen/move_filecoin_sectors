@@ -7,13 +7,17 @@ import (
 	"move_sectors/build"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
 var (
 	log                   = logging.Logger("main")
-	computersMapSingleton = new(ComputersMap)
-	stop                  = false
+	computersMapSingleton = ComputersMap{
+		CMap:  make(map[string]Computer),
+		CLock: new(sync.Mutex),
+	}
+	stop = false
 )
 
 /*
@@ -56,7 +60,7 @@ var CpCmd = &cli.Command{
 	},
 
 	Action: func(cctx *cli.Context) error {
-		log.Info("start move_sector,version:%s", build.GetVersion())
+		log.Infof("start move_sector,version:%s", build.GetVersion())
 
 		config, err := getConfig(cctx)
 		if err != nil {
