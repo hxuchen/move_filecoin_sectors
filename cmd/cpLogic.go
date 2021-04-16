@@ -49,6 +49,8 @@ ForTasks:
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
+			computersMapSingleton.CMap[task.SrcIp] = srcComputer
+			computersMapSingleton.CMap[task.DstIp] = dstComputer
 			log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 			computersMapSingleton.CLock.Unlock()
 			time.Sleep(time.Second * 1)
@@ -117,6 +119,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		computersMapSingleton.CLock.Lock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
+		computersMapSingleton.CMap[task.SrcIp] = *srcComputer
+		computersMapSingleton.CMap[task.DstIp] = *dstComputer
 		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 		computersMapSingleton.CLock.Unlock()
 		log.Infof("task: %v done", task)
@@ -147,6 +151,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		computersMapSingleton.CLock.Lock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
+		computersMapSingleton.CMap[task.SrcIp] = *srcComputer
+		computersMapSingleton.CMap[task.DstIp] = *dstComputer
 		computersMapSingleton.CLock.Unlock()
 
 		if err != nil {
