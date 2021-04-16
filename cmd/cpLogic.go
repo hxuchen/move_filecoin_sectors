@@ -52,6 +52,7 @@ func start(cfg *Config) {
 }
 
 func initializeComputerMapSingleton(cfg *Config) error {
+	computersMapSingleton.CMap = make(map[string]Computer)
 	for _, v := range cfg.Computers {
 		if v.Ip == "" || v.BandWidth == 0 {
 			return errors.New("invalid computer ip or BandWidth,please check the config")
