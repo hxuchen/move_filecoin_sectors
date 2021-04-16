@@ -4,14 +4,16 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
-	"move_sectors/mv_common"
-	"move_sectors/mv_utils"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
-var log = logging.Logger("main")
-
-var srcPathList = make([]mv_common.SrcFiles, 1)
+var (
+	log                   = logging.Logger("main")
+	computersMapSingleton = new(ComputersMap)
+	stop                  = false
+)
 
 /*
 	cmd include
@@ -38,51 +40,36 @@ func main() {
 }
 
 var CpCmd = &cli.Command{
-	Name:  "copy",
+	Name:  "run",
 	Usage: "start to copy files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     "srcPath",
-			Usage:    "special the file that contains the source paths",
+			Name:     "Path",
+			Usage:    "special the config file paths",
 			Required: true,
 			Hidden:   false,
-		},
-		&cli.StringFlag{
-			Name:     "minerIP",
-			Usage:    "special the miner address",
-			Required: true,
-			Hidden:   false,
-		},
-		&cli.StringFlag{
-			Name:     "dstPath",
-			Usage:    "special the target location",
-			Required: true,
-			Hidden:   false,
+			Value:    "~/mv_sectors.yaml",
 		},
 	},
 
 	Action: func(cctx *cli.Context) error {
 		log.Info("start move_sector,version:%s", build.GetVersion())
 
-		srcPath := cctx.String("srcPath")
-		totalUsage, err := initializeSrcPathList(srcPath)
+		config, err := getConfig(cctx)
 		if err != nil {
 			log.Error(err)
 			return nil
 		}
-
-		dstPath := cctx.String("dstPath")
-		availableSize, err := mv_utils.GetAvailableSize(dstPath)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-
-		if availableSize < totalUsage {
-			log.Errorf("%s has no enough space to store all files", dstPath)
-			return nil
-		}
-		startCopy()
-
+		stopSignal := make(chan os.Signal, 2)
+		signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+		go func() {
+			select {
+			case <-stopSignal:
+				stop = true
+			}
+		}()
+		start(config)
+		log.Info("mv_sectors exited")
+		return nil
 	},
 }

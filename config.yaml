@@ -1,0 +1,11 @@
+computers:
+  - ip: 192.168.97.91
+    bandwidth: 1  #GB/s
+    limitthreads: 0
+    currentthreads: 1
+tasks:
+  - srcip: 192.168.97.91
+    src: /mnt
+    dstip: 192.168.92.92
+    dst: /mnt/data
+singlethreadmbps: 50 # MB/s
