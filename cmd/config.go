@@ -113,11 +113,11 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 func hasEnoughSpaceToStore(src, dst string) (bool, error) {
 	srcSize, err := mv_utils.GetUsedSize(src)
 	if err != nil {
-		return false, fmt.Errorf("path: %s %v", src, err)
+		return false, fmt.Errorf("src path: %s %v", src, err)
 	}
 	availableSize, err := mv_utils.GetAvailableSize(dst)
 	if err != nil {
-		return false, fmt.Errorf("path: %s %v", dst, err)
+		return false, fmt.Errorf("dst path: %s %v", dst, err)
 	}
 	if availableSize <= srcSize {
 		return false, fmt.Errorf("dst: %s has no enough space to store all files from %s", dst, src)
