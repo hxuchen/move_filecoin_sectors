@@ -87,7 +87,7 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 			return false, fmt.Errorf("invalid task config:%v", t)
 		}
 
-		if _, ok := tMap[t.SrcIp]; ok {
+		if _, ok := tMap[t.Src]; ok {
 			doubledTlist = append(doubledTlist, t)
 		} else {
 			tMap[t.SrcIp] = struct{}{}
