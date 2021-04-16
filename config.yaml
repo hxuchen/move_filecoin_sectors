@@ -1,11 +1,19 @@
 computers:
-  - ip: 192.168.97.91
-    bandwidth: 1  #GB/s
+  - ip: 192.168.32.52
+    bandwidth: 1
     limitthreads: 0
-    currentthreads: 1
+    currentthreads: 0
+  - ip: 192.168.99.250
+    bandwidth: 1
+    limitthreads: 0
+    currentthreads: 0
+  - ip: 192.168.99.201
+    bandwidth: 1
+    limitthreads: 0
+    currentthreads: 0
 tasks:
-  - srcip: 192.168.97.91
-    src: /mnt
-    dstip: 192.168.92.92
-    dst: /mnt/data
+  - srcip: 192.168.32.52
+    src: /mnt/32cephtest/sealed/s-t020957-1666
+    dstip: 192.168.99.250
+    dst: /mnt/dataa/sealed
 singlethreadmbps: 50 # MB/s

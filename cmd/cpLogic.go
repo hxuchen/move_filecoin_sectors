@@ -68,29 +68,61 @@ func initializeComputerMapSingleton(cfg *Config) error {
 }
 
 func copyGo(task CpTask, copyCycleDelay int) {
-	_ = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
-		if err != nil || srcF == nil {
-			return err
-		}
-		dst := getFinalDst(task.Src, path, task.Dst)
+	stat, err := os.Stat(task.Src)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if stat.IsDir() {
+		_ = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
+			if err != nil || srcF == nil {
+				log.Error(err)
+				return err
+			}
+
+			dst := getFinalDst(task.Src, path, task.Dst)
+			dstF, err := os.Stat(dst)
+			if err == nil && !dstF.IsDir() {
+				srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
+				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+				if srcSha256 == dstSha256 {
+					return nil
+				}
+			}
+			err = mv_utils.MakeDirIfNotExists(dst)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			err = copy(path, dst, copyCycleDelay)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			return nil
+		})
+	} else {
+		dst := strings.Replace(task.Src, path.Dir(task.Src), task.Dst, 1)
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
-			srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
+			srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 			dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 			if srcSha256 == dstSha256 {
-				return nil
+				return
 			}
 		}
 		err = mv_utils.MakeDirIfNotExists(dst)
 		if err != nil {
-			return err
+			log.Error(err)
+			return
 		}
-		err = copy(path, dst, copyCycleDelay)
+		err = copy(task.Src, dst, copyCycleDelay)
 		if err != nil {
-			return err
+			log.Error(err)
+			return
 		}
-		return nil
-	})
+	}
+
 }
 
 func getFinalDst(oriSrc, src, oriDst string) string {
