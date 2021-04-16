@@ -112,16 +112,17 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			}
 			return nil
 		})
-		workingTasks.WLock.Lock()
 
 		computersMapSingleton.CLock.Lock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
+		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 		computersMapSingleton.CMap[task.SrcIp] = *srcComputer
 		computersMapSingleton.CMap[task.DstIp] = *dstComputer
 
+		workingTasks.WLock.Lock()
 		delete(workingTasks.Tasks, task.Src)
-		log.Info("task remain: %d", len(workingTasks.Tasks))
+		log.Infof("working task remain: %d", len(workingTasks.Tasks))
 		workingTasks.WLock.Unlock()
 
 		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
@@ -151,13 +152,14 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		computersMapSingleton.CLock.Lock()
 		srcComputer.CurrentThreads--
 		dstComputer.CurrentThreads--
+		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 		computersMapSingleton.CMap[task.SrcIp] = *srcComputer
 		computersMapSingleton.CMap[task.DstIp] = *dstComputer
 		computersMapSingleton.CLock.Unlock()
 
 		workingTasks.WLock.Lock()
 		delete(workingTasks.Tasks, task.Src)
-		log.Info("task remain: %d", len(workingTasks.Tasks))
+		log.Infof("working task remain: %d", len(workingTasks.Tasks))
 		workingTasks.WLock.Unlock()
 
 		if err != nil {
