@@ -124,7 +124,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		workingTasks.WLock.Lock()
 		defer workingTasks.WLock.Unlock()
 		delete(workingTasks.Tasks, task.Src)
-		log.Infof("working task remain: %d", len(workingTasks.Tasks))
+		log.Infof("working task remain: %d；%v", len(workingTasks.Tasks), workingTasks.Tasks)
 
 		if err != nil {
 			log.Errorf("task %v done with error: %v", task, err)
@@ -162,7 +162,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		workingTasks.WLock.Lock()
 		defer workingTasks.WLock.Unlock()
 		delete(workingTasks.Tasks, task.Src)
-		log.Infof("working task remain: %d", len(workingTasks.Tasks))
+		log.Infof("working task remain: %d；%v", len(workingTasks.Tasks), workingTasks.Tasks)
 		if err == nil {
 			log.Infof("task: %v done", task)
 		}
