@@ -111,7 +111,7 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 }
 
 func hasEnoughSpaceToStore(src, dst string) (bool, error) {
-	srcSize, err := mv_utils.GetUsedSize(src)
+	srcSize, err := mv_utils.GetSrcSize(src)
 	if err != nil {
 		return false, fmt.Errorf("src path: %s %v", src, err)
 	}

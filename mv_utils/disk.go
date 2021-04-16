@@ -7,6 +7,7 @@ import (
 	"move_sectors/mv_common"
 	"os"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -56,7 +57,24 @@ func GetUsedSize(path string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return ((stat.Blocks - stat.Bavail) * uint64(stat.Bsize)) >> 30, nil
+	return (stat.Blocks - stat.Bavail) * uint64(stat.Bsize), nil
+}
+
+func GetSrcSize(srcPath string) (uint64, error) {
+	stat, err := os.Stat(srcPath)
+	if err != nil {
+		return 0, err
+	}
+	size := uint64(0)
+	if stat.IsDir() {
+		filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
+			size += uint64(info.Size())
+			return err
+		})
+	} else {
+		size = uint64(stat.Size())
+	}
+	return size, nil
 }
 
 func GetAvailableSize(path string) (uint64, error) {
@@ -65,7 +83,7 @@ func GetAvailableSize(path string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return (stat.Bavail * uint64(stat.Bsize)) >> 30, nil
+	return stat.Bavail * uint64(stat.Bsize), nil
 }
 
 func MakeDirIfNotExists(p string) error {
