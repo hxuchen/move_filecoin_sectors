@@ -39,12 +39,13 @@ ForTasks:
 		if stop {
 			break
 		}
-		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
+		srcComputer := computersMapSingleton.CMap[task.SrcIp]
+		dstComputer := computersMapSingleton.CMap[task.DstIp]
 		select {
-		case <-canGo(srcComputer, dstComputer):
+		case <-canGo(&srcComputer, &dstComputer):
 			// thread ++
 			workingTasks.Tasks[task.Src] = task
-			go copyGo(task, cfg.SingleThreadMBPS, srcComputer, dstComputer)
+			go copyGo(task, cfg.SingleThreadMBPS, &srcComputer, &dstComputer)
 			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
@@ -65,7 +66,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 		}
 		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
 			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = &v
+			computersMapSingleton.CMap[v.Ip] = v
 
 		} else {
 			return errors.New("double computer ip,please check the config")
@@ -82,7 +83,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		return
 	}
 	if stat.IsDir() {
-		_ = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
+		err = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
 			if err != nil || srcF == nil {
 				log.Error(err)
 				return err
@@ -102,23 +103,26 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				log.Error(err)
 				return err
 			}
-			err = copy(task, path, dst, singleThreadMBPS)
-			workingTasks.WLock.Lock()
-			delete(workingTasks.Tasks, task.Src)
-			workingTasks.WLock.Unlock()
-
-			computersMapSingleton.CLock.Lock()
-			srcComputer.CurrentThreads--
-			dstComputer.CurrentThreads--
-			log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
-			computersMapSingleton.CLock.Unlock()
-
+			err = copy(path, dst, singleThreadMBPS)
 			if err != nil {
 				log.Error(err)
 				return err
 			}
 			return nil
 		})
+		workingTasks.WLock.Lock()
+		delete(workingTasks.Tasks, task.Src)
+		workingTasks.WLock.Unlock()
+
+		computersMapSingleton.CLock.Lock()
+		srcComputer.CurrentThreads--
+		dstComputer.CurrentThreads--
+		log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
+		computersMapSingleton.CLock.Unlock()
+		log.Infof("task: %v done", task)
+		if err != nil {
+			log.Errorf("task %v done with error: %v", task, err)
+		}
 	} else {
 		dst := strings.Replace(task.Src, path.Dir(task.Src), task.Dst, 1)
 		dstF, err := os.Stat(dst)
@@ -126,6 +130,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 			dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 			if srcSha256 == dstSha256 {
+				log.Infof("src file: %s existed in dst %s", task.Src, task.Dst)
 				return
 			}
 		}
@@ -134,7 +139,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			log.Error(err)
 			return
 		}
-		err = copy(task, task.Src, dst, singleThreadMBPS)
+		err = copy(task.Src, dst, singleThreadMBPS)
 		workingTasks.WLock.Lock()
 		delete(workingTasks.Tasks, task.Src)
 		workingTasks.WLock.Unlock()
@@ -145,7 +150,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		computersMapSingleton.CLock.Unlock()
 
 		if err != nil {
-			log.Error(err)
+			log.Errorf("task %v done with error: %v", task, err)
 			return
 		}
 	}
@@ -156,7 +161,7 @@ func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(task CpTask, src, dst string, singleThreadMBPS int) (err error) {
+func copy(src, dst string, singleThreadMBPS int) (err error) {
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 

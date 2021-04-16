@@ -29,7 +29,7 @@ type Computer struct {
 }
 
 type ComputersMap struct {
-	CMap  map[string]*Computer
+	CMap  map[string]Computer
 	CLock *sync.Mutex
 }
 
