@@ -46,7 +46,7 @@ var CpCmd = &cli.Command{
 		&cli.StringFlag{
 			Name:     "Path",
 			Usage:    "special the config file paths",
-			Required: true,
+			Required: false,
 			Hidden:   false,
 			Value:    "~/mv_sectors.yaml",
 		},
