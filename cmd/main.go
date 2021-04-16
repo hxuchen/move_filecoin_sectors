@@ -44,7 +44,7 @@ var CpCmd = &cli.Command{
 	Usage: "start to copy files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     "Path",
+			Name:     "path",
 			Usage:    "special the config file paths",
 			Required: false,
 			Hidden:   false,
