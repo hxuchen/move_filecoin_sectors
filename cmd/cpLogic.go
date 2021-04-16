@@ -12,20 +12,42 @@ import (
 	"io"
 	"move_sectors/mv_utils"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
+	"time"
 )
 
+type WorkingTasks struct {
+	TaskList []*CpTask
+	WLock    *sync.Mutex
+}
+
+var workingTasks = new(WorkingTasks)
+
 func start(cfg *Config) {
+	stopSignal := make(chan os.Signal, 2)
+	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
 	for _, task := range cfg.CpTasks {
 		srcComputer, dstComputer := computersMapSingleton.CMap[task.SrcIp], computersMapSingleton.CMap[task.DstIp]
-		if canGo(&srcComputer, &dstComputer) {
+		select {
+		case <-canGo(&srcComputer, &dstComputer):
 			// thread ++
+			computersMapSingleton.CLock.Lock()
 			srcComputer.CurrentThreads++
 			dstComputer.CurrentThreads++
+			computersMapSingleton.CLock.Unlock()
+			workingTasks.TaskList = append(workingTasks.TaskList, &task)
+			copyCycleDelay := calCopyCycleDelay(srcComputer.BindWidth, cfg.SingleThreadMBPS)
+			go copyGo(task, copyCycleDelay)
+			time.Sleep(time.Second * 1)
+		case <-stopSignal:
+			waitingForTasksThreadsStop()
+			break
 		}
-		copyGo(task)
 	}
 }
 
@@ -45,8 +67,8 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task CpTask) error {
-	err := filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
+func copyGo(task CpTask, copyCycleDelay int) {
+	_ = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
 		if err != nil || srcF == nil {
 			return err
 		}
@@ -63,24 +85,19 @@ func copyGo(task CpTask) error {
 		if err != nil {
 			return err
 		}
-		err = copy(path, dst)
+		err = copy(path, dst, copyCycleDelay)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-	return err
 }
 
 func getFinalDst(oriSrc, src, oriDst string) string {
 	return strings.Replace(src, oriSrc, oriDst, 1)
 }
 
-func copy(src, dst string) (err error) {
-
-	if src == dst {
-		return nil
-	}
+func copy(src, dst string, copyCycleDelay int) (err error) {
 	const BUFFER_SIZE = 1 * 1024 * 1024
 	buf := make([]byte, BUFFER_SIZE)
 
@@ -130,11 +147,19 @@ func copy(src, dst string) (err error) {
 		}
 
 		// 限速
-
+		time.Sleep(time.Second * time.Duration(copyCycleDelay))
 		if _, err := destination.Write(buf[:n]); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func waitingForTasksThreadsStop() {
+	for {
+		if len(workingTasks.TaskList) == 0 {
+			break
+		}
+	}
 }

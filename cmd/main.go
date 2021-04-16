@@ -5,11 +5,13 @@ import (
 	"github.com/urfave/cli/v2"
 	"move_sectors/build"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
 	log                   = logging.Logger("main")
-	computersMapSingleton ComputersMap
+	computersMapSingleton = new(ComputersMap)
 	stop                  = false
 )
 
@@ -58,8 +60,16 @@ var CpCmd = &cli.Command{
 			log.Error(err)
 			return nil
 		}
-
+		stopSignal := make(chan os.Signal, 2)
+		signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+		go func() {
+			select {
+			case <-stopSignal:
+				stop = true
+			}
+		}()
 		start(config)
+		log.Info("mv_sectors exited")
 		return nil
 	},
 }

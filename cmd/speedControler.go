@@ -10,6 +10,14 @@ func calThreadLimit(bindWidth, singleThreadMBPS int) int {
 	return bindWidth << 10 / singleThreadMBPS
 }
 
-func canGo(srcComputer, dstComputer *Computer) bool {
-	return srcComputer.CurrentThreads < srcComputer.LimitThread && dstComputer.CurrentThreads < dstComputer.LimitThread
+func canGo(srcComputer, dstComputer *Computer) chan struct{} {
+	var ok = make(chan struct{}, 1)
+	if srcComputer.CurrentThreads < srcComputer.LimitThread && dstComputer.CurrentThreads < dstComputer.LimitThread {
+		ok <- struct{}{}
+	}
+	return ok
+}
+
+func calCopyCycleDelay(bindWidth, singleThreadMBPS int) int {
+	return bindWidth << 10 / singleThreadMBPS
 }
