@@ -106,7 +106,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 						return nil
 					}
 				}
-				err = mv_utils.MakeDirIfNotExists(dst)
+				err = mv_utils.MakeDirIfNotExists(filepath.Dir(dst))
 				if err != nil {
 					log.Error(err)
 					return err
