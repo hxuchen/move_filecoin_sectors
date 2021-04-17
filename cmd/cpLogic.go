@@ -105,7 +105,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 					if srcSha256 == dstSha256 {
 						minusThread(srcComputer, dstComputer, task)
 						delWorkingTasks(task)
-						log.Infof("src file: %s already existed in dst %s,task done", task.Src, task.Dst)
+						log.Infof("src file: %s already existed in dst %s,task done", path, dst)
 						return nil
 					}
 				}
