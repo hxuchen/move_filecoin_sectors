@@ -35,8 +35,9 @@ var workingTasks = WorkingTasks{
 func start(cfg *Config) {
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
+	lenTasks := len(cfg.CpTasks)
 ForTasks:
-	for _, task := range cfg.CpTasks {
+	for idx, task := range cfg.CpTasks {
 		if stop {
 			break
 		}
@@ -51,11 +52,17 @@ ForTasks:
 			addThread(srcComputer, dstComputer, task)
 
 			time.Sleep(time.Second * 1)
+
+			if idx == lenTasks-1 {
+				waitingForAllTasksDone()
+				break ForTasks
+			}
+
 		case <-stopSignal:
 			break ForTasks
 		}
 	}
-	waitingForTasksThreadsStop()
+	waitingForAllTasksDone()
 }
 
 func initializeComputerMapSingleton(cfg *Config) error {
@@ -224,7 +231,7 @@ func copy(src, dst string, singleThreadMBPS int) (err error) {
 	return
 }
 
-func waitingForTasksThreadsStop() {
+func waitingForAllTasksDone() {
 	for {
 		if len(workingTasks.Tasks) == 0 {
 			break
