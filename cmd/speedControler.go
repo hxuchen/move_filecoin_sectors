@@ -6,7 +6,10 @@
 
 package main
 
-import "time"
+import (
+	"runtime"
+	"time"
+)
 
 func calThreadLimit(bindWidth, singleThreadMBPS int) int {
 	return bindWidth << 10 / singleThreadMBPS
@@ -15,7 +18,7 @@ func calThreadLimit(bindWidth, singleThreadMBPS int) int {
 func canGo(srcComputer, dstComputer *Computer) chan struct{} {
 	var ok = make(chan struct{}, 1)
 	for {
-		if srcComputer.CurrentThreads < srcComputer.LimitThread && dstComputer.CurrentThreads < dstComputer.LimitThread {
+		if srcComputer.CurrentThreads < srcComputer.LimitThread && dstComputer.CurrentThreads < dstComputer.LimitThread && srcComputer.CurrentThreads < runtime.NumCPU() {
 			ok <- struct{}{}
 			break
 		}
