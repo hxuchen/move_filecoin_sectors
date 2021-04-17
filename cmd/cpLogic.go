@@ -96,6 +96,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 
 				dst := getFinalDst(task.Src, path, task.Dst)
 				dstF, err := os.Stat(dst)
+				fmt.Println(dst)
+				fmt.Println(dstF.IsDir())
 				if err == nil && !dstF.IsDir() {
 					srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
 					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
@@ -260,8 +262,12 @@ func addThread(srcComputer, dstComputer Computer, task CpTask) {
 func minusThread(srcComputer, dstComputer *Computer, task CpTask) {
 	computersMapSingleton.CLock.Lock()
 	defer computersMapSingleton.CLock.Unlock()
-	srcComputer.CurrentThreads--
-	dstComputer.CurrentThreads--
+	if srcComputer.CurrentThreads > 0 {
+		srcComputer.CurrentThreads--
+	}
+	if dstComputer.CurrentThreads > 0 {
+		dstComputer.CurrentThreads--
+	}
 	log.Infof("src:%s, current threads:%d,dst:%s, current threads:%d", task.SrcIp, srcComputer.CurrentThreads, task.DstIp, dstComputer.CurrentThreads)
 	computersMapSingleton.CMap[task.SrcIp] = *srcComputer
 	computersMapSingleton.CMap[task.DstIp] = *dstComputer
