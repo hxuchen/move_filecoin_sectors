@@ -82,6 +82,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 	}
 	if stat.IsDir() {
 		err = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
+			fmt.Println(path)
 			if err != nil || srcF == nil {
 				log.Error(err)
 				return err
