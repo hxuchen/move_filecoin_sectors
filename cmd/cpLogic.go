@@ -222,16 +222,17 @@ func copy(src, dst string, singleThreadMBPS int) (err error) {
 			break
 		}
 
-		if _, err := destination.Write(buf[:n]); err != nil {
-			return err
-		}
-
 		// 限速
 		readed += len(buf)
 		if readed >= (singleThreadMBPS << 20) {
 			readed = 0
 			time.Sleep(time.Second * 1)
 		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+
 	}
 
 	return
