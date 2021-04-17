@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"move_sectors/mv_utils"
 	"os"
 	"os/signal"
@@ -81,45 +82,34 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		return
 	}
 	if stat.IsDir() {
-		err = filepath.Walk(task.Src, func(path string, srcF os.FileInfo, err error) error {
-			fmt.Println(path)
-			if err != nil || srcF == nil {
-				log.Error(err)
-				return err
-			}
-
-			if !srcF.IsDir() {
-				dst := getFinalDst(task.Src, path, task.Dst)
-				dstF, err := os.Stat(dst)
-				fmt.Println(dst)
-				fmt.Println(dstF.IsDir())
-				if err == nil && !dstF.IsDir() {
-					srcSha256, _ := mv_utils.CalFileSha256(path, srcF.Size())
-					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-					if srcSha256 == dstSha256 {
-						log.Infof("src file: %s already existed in dst %s,task done", path, dst)
-					}
-				}
-				err = mv_utils.MakeDirIfNotExists(filepath.Dir(dst))
-				if err != nil {
-					log.Error(err)
-					return err
-				}
-				err = copy(path, dst, singleThreadMBPS)
-				if err != nil {
-					log.Error(err)
-					return err
+		var fileList = make([]string, 0)
+		files, err := GetAllFile(task.Src, fileList)
+		for _, file := range files {
+			dst := getFinalDst(task.Src, file, task.Dst)
+			dstF, errFor := os.Stat(dst)
+			if errFor == nil && !dstF.IsDir() {
+				srcF, _ := os.Stat(file)
+				srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
+				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+				if srcSha256 == dstSha256 {
+					log.Infof("src file: %s already existed in dst %s,task done", file, dst)
 				}
 			}
-			minusThread(srcComputer, dstComputer, task)
-			delWorkingTasks(task)
-			return nil
-		})
-
+			errFor = mv_utils.MakeDirIfNotExists(filepath.Dir(dst))
+			if errFor != nil {
+				log.Error(errFor)
+				err = errFor
+				break
+			}
+			errFor = copy(file, dst, singleThreadMBPS)
+			if errFor != nil {
+				log.Error(errFor)
+				err = errFor
+				break
+			}
+		}
 		minusThread(srcComputer, dstComputer, task)
-
 		delWorkingTasks(task)
-
 		if err != nil {
 			log.Errorf("task %v done with error: %v", task, err)
 		} else {
@@ -272,4 +262,27 @@ func delWorkingTasks(task CpTask) {
 	defer workingTasks.WLock.Unlock()
 	delete(workingTasks.Tasks, task.Src)
 	log.Infof("working task remain: %d", len(workingTasks.Tasks))
+}
+
+func GetAllFile(src string, fileList []string) ([]string, error) {
+	slash := filepath.FromSlash(src)
+	dir, err := ioutil.ReadDir(slash)
+	if err != nil {
+		return fileList, err
+	}
+	for _, fi := range dir {
+		// 如果还是文件夹
+		if fi.IsDir() {
+			fullDir := filepath.Join(slash, fi.Name())
+			// 继续遍历
+			fileList, err = GetAllFile(fullDir, fileList)
+			if err != nil {
+				return fileList, err
+			}
+		} else {
+			fullName := filepath.Join(slash, fi.Name())
+			fileList = append(fileList, fullName)
+		}
+	}
+	return fileList, nil
 }
