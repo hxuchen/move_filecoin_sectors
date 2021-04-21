@@ -92,6 +92,9 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		var fileList = make([]string, 0)
 		files, err := GetAllFile(task.Src, fileList)
 		for _, file := range files {
+			if stop {
+				break
+			}
 			dst := getFinalDst(task.Src, file, task.Dst)
 			dstF, errFor := os.Stat(dst)
 			if errFor == nil && !dstF.IsDir() {
