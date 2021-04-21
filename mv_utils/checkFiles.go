@@ -8,6 +8,8 @@ package mv_utils
 
 import (
 	"bufio"
+	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -20,7 +22,7 @@ func CalFileSha256(filePath string, size int64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fileSha256(raw)
+	return fileSha1(raw)
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
@@ -73,4 +75,16 @@ func fileSha256(data []byte) (string, error) {
 	_sha256 := sha256.New()
 	_sha256.Write(data)
 	return hex.EncodeToString(_sha256.Sum([]byte(""))), nil
+}
+
+func fileSha1(data []byte) (string, error) {
+	_sha1 := sha1.New()
+	_sha1.Write(data)
+	return hex.EncodeToString(_sha1.Sum([]byte(""))), nil
+}
+
+func fileMd5(data []byte) (string, error) {
+	_md5 := md5.New()
+	_md5.Write(data)
+	return hex.EncodeToString(_md5.Sum([]byte(""))), nil
 }
