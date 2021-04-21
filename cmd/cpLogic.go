@@ -101,7 +101,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
 					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 					if srcSha256 == dstSha256 {
-						log.Infof("src file: %s already existed in dst %s,task done,calHash cost v%", task.Src, task.Dst, time.Now().Sub(now))
+						log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, task.Dst, time.Now().Sub(now))
 						continue
 					}
 				}
@@ -142,7 +142,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				if srcSha256 == dstSha256 {
 					minusThread(srcComputer, dstComputer, task)
 					delWorkingTasks(task)
-					log.Infof("src file: %s already existed in dst %s,task done,calHash cost v%", task.Src, task.Dst, time.Now().Sub(now))
+					log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, task.Dst, time.Now().Sub(now))
 					return
 				}
 			}
