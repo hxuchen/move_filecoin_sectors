@@ -96,10 +96,13 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			dstF, errFor := os.Stat(dst)
 			if errFor == nil && !dstF.IsDir() {
 				srcF, _ := os.Stat(file)
-				srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
-				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-				if srcSha256 == dstSha256 {
-					log.Infof("src file: %s already existed in dst %s,task done", file, dst)
+				if dstF.Size() == srcF.Size() {
+					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
+					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+					if srcSha256 == dstSha256 {
+						log.Infof("src file: %s already existed in dst %s,task done", file, dst)
+						continue
+					}
 				}
 			}
 			errFor = mv_utils.MakeDirIfNotExists(filepath.Dir(dst))
@@ -131,13 +134,15 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		dst := strings.Replace(task.Src, path.Dir(task.Src), task.Dst, 1)
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
-			srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
-			dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-			if srcSha256 == dstSha256 {
-				minusThread(srcComputer, dstComputer, task)
-				delWorkingTasks(task)
-				log.Infof("src file: %s already existed in dst %s,task done", task.Src, task.Dst)
-				return
+			if dstF.Size() == stat.Size() {
+				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
+				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+				if srcSha256 == dstSha256 {
+					minusThread(srcComputer, dstComputer, task)
+					delWorkingTasks(task)
+					log.Infof("src file: %s already existed in dst %s,task done", task.Src, task.Dst)
+					return
+				}
 			}
 		}
 		err = mv_utils.MakeDirIfNotExists(path.Dir(dst))
