@@ -52,7 +52,10 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 			// read the tail of file
 			if passed := point + BUFFER_SIZE; passed < size && point+chunk >= size {
 				bufTail := make([]byte, BUFFER_SIZE)
-				file.Seek(size-BUFFER_SIZE, 0)
+				if remain := size - (point + BUFFER_SIZE); remain < BUFFER_SIZE {
+					bufTail = make([]byte, remain)
+				}
+				file.Seek(size-int64(len(bufTail)), 0)
 				_, err := file.Read(bufTail)
 				if err != nil && err != io.EOF {
 					return nil, err
