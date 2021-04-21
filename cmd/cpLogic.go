@@ -97,6 +97,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			if errFor == nil && !dstF.IsDir() {
 				srcF, _ := os.Stat(file)
 				if dstF.Size() == srcF.Size() {
+					now := time.Now()
 					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
 					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 					if srcSha256 == dstSha256 {
@@ -135,9 +136,9 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
 			if dstF.Size() == stat.Size() {
+				now := time.Now()
 				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-				now := time.Now()
 				if srcSha256 == dstSha256 {
 					minusThread(srcComputer, dstComputer, task)
 					delWorkingTasks(task)
