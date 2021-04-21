@@ -53,12 +53,9 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 			if passed := point + BUFFER_SIZE; passed < size && point+chunk >= size {
 				bufTail := make([]byte, BUFFER_SIZE)
 				file.Seek(size-BUFFER_SIZE, 0)
-				n, err := file.Read(bufTail)
+				_, err := file.Read(bufTail)
 				if err != nil && err != io.EOF {
 					return nil, err
-				}
-				if n == 0 {
-					break
 				}
 				buf = append(buf, bufTail...)
 			}
