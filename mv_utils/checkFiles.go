@@ -33,7 +33,7 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 		return nil, err
 	}
 	defer file.Close()
-	if size <= BUFFER_SIZE*10 {
+	if size <= 10<<20 {
 		reader := bufio.NewReader(file)
 		sample, err = ioutil.ReadAll(reader)
 		if err != nil {
