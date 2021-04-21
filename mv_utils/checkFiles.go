@@ -26,7 +26,7 @@ func CalFileSha256(filePath string, size int64) (string, error) {
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
-	const BUFFER_SIZE = 4 * 1024
+	const BUFFER_SIZE = 1024
 	var sample []byte
 	file, err := os.Open(filePath)
 	if err != nil {
