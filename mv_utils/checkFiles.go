@@ -33,7 +33,7 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 		return nil, err
 	}
 	defer file.Close()
-	if size <= BUFFER_SIZE*5 {
+	if size <= BUFFER_SIZE*10 {
 		reader := bufio.NewReader(file)
 		sample, err = ioutil.ReadAll(reader)
 		if err != nil {
@@ -41,7 +41,7 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 		}
 	} else {
 		buf := make([]byte, BUFFER_SIZE)
-		chunk := size / 5
+		chunk := size / 10
 		for point := int64(0); point < size; point += chunk {
 			file.Seek(point, 0)
 			n, err := file.Read(buf)
