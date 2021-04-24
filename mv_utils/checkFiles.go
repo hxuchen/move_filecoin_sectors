@@ -18,12 +18,12 @@ import (
 	"os"
 )
 
-func CalFileSha256(filePath string, size int64) ([]byte, error) {
+func CalFileSha256(filePath string, size int64) (string, error) {
 	raw, err := MakeCalData(filePath, size)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return raw, nil
+	return fileMd5(raw)
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
