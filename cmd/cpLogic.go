@@ -154,9 +154,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				//	log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
 				//	return
 				//}
-
+				now := time.Now()
 				for idx, b := range srcSha256 {
-					now := time.Now()
 					if b^dstSha256[idx] == 0 {
 						minusThread(srcComputer, dstComputer, task)
 						delWorkingTasks(task)
