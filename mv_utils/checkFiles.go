@@ -12,6 +12,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
+	"hash/crc32"
 	"io"
 	"io/ioutil"
 	"os"
@@ -89,4 +90,15 @@ func fileMd5(data []byte) (string, error) {
 	_md5 := md5.New()
 	_md5.Write(data)
 	return hex.EncodeToString(_md5.Sum([]byte(""))), nil
+}
+
+func fileCrc32(data []byte) (uint32, error) {
+	_ieee := crc32.NewIEEE()
+	_, err := io.WriteString(_ieee, string(data))
+	if err != nil {
+		return 0, err
+	}
+	return _ieee.Sum32(), nil
+
+	//return hex.EncodeToString(_ieee.Sum([]byte(""))), nil
 }
