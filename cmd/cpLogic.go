@@ -103,16 +103,16 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 					now := time.Now()
 					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
 					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-					if string(srcSha256) == string(dstSha256) {
-						log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
-						continue
-					}
-					//for idx, b := range srcSha256 {
-					//	if b^dstSha256[idx] == 0 {
-					//		log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
-					//		break
-					//	}
+					//if string(srcSha256) == string(dstSha256) {
+					//	log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
+					//	continue
 					//}
+					for idx, b := range srcSha256 {
+						if b^dstSha256[idx] == 0 {
+							log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
+							break
+						}
+					}
 				}
 			}
 			errFor = mv_utils.MakeDirIfNotExists(filepath.Dir(dst))
@@ -147,23 +147,23 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 			if dstF.Size() == stat.Size() {
 				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
-				now := time.Now()
-				if string(srcSha256) == string(dstSha256) {
-					minusThread(srcComputer, dstComputer, task)
-					delWorkingTasks(task)
-					log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
-					return
-				}
-
-				//for idx, b := range srcSha256 {
-				//	now := time.Now()
-				//	if b^dstSha256[idx] == 0 {
-				//		minusThread(srcComputer, dstComputer, task)
-				//		delWorkingTasks(task)
-				//		log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
-				//		return
-				//	}
+				//now := time.Now()
+				//if string(srcSha256) == string(dstSha256) {
+				//	minusThread(srcComputer, dstComputer, task)
+				//	delWorkingTasks(task)
+				//	log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
+				//	return
 				//}
+
+				for idx, b := range srcSha256 {
+					now := time.Now()
+					if b^dstSha256[idx] == 0 {
+						minusThread(srcComputer, dstComputer, task)
+						delWorkingTasks(task)
+						log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
+						return
+					}
+				}
 			}
 		}
 		err = mv_utils.MakeDirIfNotExists(path.Dir(dst))
