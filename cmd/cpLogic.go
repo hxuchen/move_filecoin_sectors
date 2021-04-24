@@ -47,7 +47,7 @@ ForTasks:
 		case <-canGo(&srcComputer, &dstComputer):
 			// thread ++
 			workingTasks.Tasks[task.Src] = task
-			go copyGo(task, cfg.SingleThreadMBPS, &srcComputer, &dstComputer)
+			go copyGo(task, cfg.SingleThreadMBPS, &srcComputer, &dstComputer, cfg.Chunks)
 
 			addThread(srcComputer, dstComputer, task)
 
@@ -81,7 +81,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer) {
+func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer, chunks int64) {
 	log.Infof("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
@@ -101,8 +101,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				srcF, _ := os.Stat(file)
 				if dstF.Size() == srcF.Size() {
 					now := time.Now()
-					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size())
-					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size(), chunks)
+					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size(), chunks)
 					if srcSha256 == dstSha256 && srcSha256 != "" && dstSha256 != "" {
 						log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
 						continue
@@ -139,8 +139,8 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
 			if dstF.Size() == stat.Size() {
-				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
-				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
+				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size(), chunks)
+				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size(), chunks)
 				now := time.Now()
 				if srcSha256 == dstSha256 && srcSha256 != "" && dstSha256 != "" {
 					log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))

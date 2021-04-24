@@ -19,6 +19,7 @@ type Config struct {
 	Computers        []Computer
 	CpTasks          []CpTask
 	SingleThreadMBPS int
+	Chunks           int64
 }
 
 type Computer struct {
