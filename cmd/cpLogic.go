@@ -106,7 +106,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 					for idx, b := range srcSha256 {
 						if b^dstSha256[idx] == 0 {
 							log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
-							continue
+							break
 						}
 					}
 				}
