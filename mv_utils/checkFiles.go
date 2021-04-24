@@ -18,12 +18,12 @@ import (
 	"os"
 )
 
-func CalFileSha256(filePath string, size int64) ([]byte, error) {
+func CalFileSha256(filePath string, size int64) (string, error) {
 	raw, err := MakeCalData(filePath, size)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return raw, nil
+	return fileCrc32(raw)
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
@@ -92,13 +92,11 @@ func fileMd5(data []byte) (string, error) {
 	return hex.EncodeToString(_md5.Sum([]byte(""))), nil
 }
 
-func fileCrc32(data []byte) (uint32, error) {
+func fileCrc32(data []byte) (string, error) {
 	_ieee := crc32.NewIEEE()
 	_, err := io.WriteString(_ieee, string(data))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	return _ieee.Sum32(), nil
-
-	//return hex.EncodeToString(_ieee.Sum([]byte(""))), nil
+	return hex.EncodeToString(_ieee.Sum([]byte(""))), nil
 }
