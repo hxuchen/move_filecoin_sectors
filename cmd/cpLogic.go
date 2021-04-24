@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -82,6 +83,8 @@ func initializeComputerMapSingleton(cfg *Config) error {
 }
 
 func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer) {
+	runtime.LockOSThread()
+	defer func() { runtime.Gosched() }()
 	log.Infof("start to do task %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
