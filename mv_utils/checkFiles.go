@@ -26,14 +26,14 @@ func CalFileSha256(filePath string, size int64) ([]byte, error) {
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
-	const BUFFER_SIZE = 1024 * 64
+	const BUFFER_SIZE = 1024 * 4
 	var sample []byte
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	if size <= BUFFER_SIZE*16 {
+	if size <= BUFFER_SIZE*256 {
 		reader := bufio.NewReader(file)
 		sample, err = ioutil.ReadAll(reader)
 		if err != nil {
@@ -41,7 +41,7 @@ func MakeCalData(filePath string, size int64) ([]byte, error) {
 		}
 	} else {
 		buf := make([]byte, BUFFER_SIZE)
-		chunk := size / 16
+		chunk := size / 256
 		for point := int64(0); point < size; point += chunk {
 			file.Seek(point, 0)
 			n, err := file.Read(buf)
