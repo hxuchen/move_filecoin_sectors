@@ -141,10 +141,10 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		dstF, err := os.Stat(dst)
 		if err == nil && !dstF.IsDir() {
 			if dstF.Size() == stat.Size() {
-				now := time.Now()
 				srcSha256, _ := mv_utils.CalFileSha256(task.Src, stat.Size())
 				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size())
 				for idx, b := range srcSha256 {
+					now := time.Now()
 					if b^dstSha256[idx] == 0 {
 						minusThread(srcComputer, dstComputer, task)
 						delWorkingTasks(task)
