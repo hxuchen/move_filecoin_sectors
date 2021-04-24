@@ -23,7 +23,7 @@ func CalFileSha256(filePath string, size int64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fileCrc32(raw)
+	return fileMd5(raw)
 }
 
 func MakeCalData(filePath string, size int64) ([]byte, error) {
