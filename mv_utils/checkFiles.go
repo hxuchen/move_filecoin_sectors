@@ -94,7 +94,7 @@ func fileMd5(data []byte) (string, error) {
 
 func fileCrc32(data []byte) (string, error) {
 	_ieee := crc32.NewIEEE()
-	_, err := io.WriteString(_ieee, string(data))
+	_, err := _ieee.Write(data)
 	if err != nil {
 		return "", err
 	}
