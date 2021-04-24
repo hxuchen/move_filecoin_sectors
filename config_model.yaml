@@ -25,3 +25,4 @@ tasks:
     dstip: 192.168.99.250
     dst: /mnt/dataa/sealed
 singlethreadmbps: 50 # MB/s
+chunks: 10

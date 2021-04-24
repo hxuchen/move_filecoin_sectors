@@ -32,6 +32,8 @@ sudo make install
 
    ![](https://markdown-pub.oss-cn-shanghai.aliyuncs.com/blog/md7gr.png)
 
+   ![](https://markdown-pub.oss-cn-shanghai.aliyuncs.com/blog/4001t.png)
+
 2. 部署方式
 
    整个数据流程走向为：源服务器——>中转服务器——>目标服务器
