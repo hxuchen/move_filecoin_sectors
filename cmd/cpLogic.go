@@ -65,24 +65,8 @@ ForTasks:
 	waitingForAllTasksDone()
 }
 
-func initializeComputerMapSingleton(cfg *Config) error {
-	for _, v := range cfg.Computers {
-		if v.Ip == "" || v.BandWidth == 0 {
-			return errors.New("invalid computer ip or BandWidth,please check the config")
-		}
-		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
-			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = v
-
-		} else {
-			return errors.New("double computer ip,please check the config")
-		}
-	}
-	return nil
-}
-
 func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Computer, chunks int64) {
-	log.Infof("start to do task %v", task)
+	log.Infof("start to do cacheSealedTask %v", task)
 	stat, err := os.Stat(task.Src)
 	if err != nil {
 		log.Error(err)
@@ -104,7 +88,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 					srcSha256, _ := mv_utils.CalFileSha256(file, srcF.Size(), chunks)
 					dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size(), chunks)
 					if srcSha256 == dstSha256 && srcSha256 != "" && dstSha256 != "" {
-						log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", file, dst, time.Now().Sub(now))
+						log.Infof("src file: %s already existed in dst %s,cacheSealedTask done,calHash cost %v", file, dst, time.Now().Sub(now))
 						continue
 					}
 				}
@@ -125,9 +109,9 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		minusThread(srcComputer, dstComputer, task)
 		delWorkingTasks(task)
 		if err != nil {
-			log.Errorf("task %v done with error: %v", task, err)
+			log.Errorf("cacheSealedTask %v done with error: %v", task, err)
 		} else {
-			log.Infof("task: %v done", task)
+			log.Infof("cacheSealedTask: %v done", task)
 		}
 	} else {
 		if stat.Size() == 0 {
@@ -143,7 +127,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 				dstSha256, _ := mv_utils.CalFileSha256(dst, dstF.Size(), chunks)
 				now := time.Now()
 				if srcSha256 == dstSha256 && srcSha256 != "" && dstSha256 != "" {
-					log.Infof("src file: %s already existed in dst %s,task done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
+					log.Infof("src file: %s already existed in dst %s,cacheSealedTask done,calHash cost %v", task.Src, dst, time.Now().Sub(now))
 					minusThread(srcComputer, dstComputer, task)
 					delWorkingTasks(task)
 					return
@@ -157,7 +141,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		}
 		err = copy(task.Src, dst, singleThreadMBPS)
 		if err != nil {
-			log.Errorf("task %v done with error: %v", task, err)
+			log.Errorf("cacheSealedTask %v done with error: %v", task, err)
 		}
 
 		minusThread(srcComputer, dstComputer, task)
@@ -165,7 +149,7 @@ func copyGo(task CpTask, singleThreadMBPS int, srcComputer, dstComputer *Compute
 		delWorkingTasks(task)
 
 		if err == nil {
-			log.Infof("task: %v done", task)
+			log.Infof("cacheSealedTask: %v done", task)
 		}
 		return
 	}
@@ -278,7 +262,7 @@ func delWorkingTasks(task CpTask) {
 	workingTasks.WLock.Lock()
 	defer workingTasks.WLock.Unlock()
 	delete(workingTasks.Tasks, task.Src)
-	log.Infof("working task remain: %d", len(workingTasks.Tasks))
+	log.Infof("working cacheSealedTask remain: %d", len(workingTasks.Tasks))
 }
 
 func GetAllFile(src string, fileList []string) ([]string, error) {

@@ -12,7 +12,7 @@ import (
 )
 
 func calThreadLimit(bindWidth, singleThreadMBPS int) int {
-	return bindWidth << 10 / singleThreadMBPS
+	return bindWidth / singleThreadMBPS
 }
 
 func canGo(srcComputer, dstComputer *Computer) chan struct{} {

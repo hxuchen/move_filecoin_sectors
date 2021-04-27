@@ -11,6 +11,7 @@ import (
 	"move_sectors/build"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 )
@@ -21,7 +22,8 @@ var (
 		CMap:  make(map[string]Computer),
 		CLock: new(sync.Mutex),
 	}
-	stop = false
+	stop              = false
+	threadControlChan = make(chan struct{}, runtime.NumCPU())
 )
 
 /*
@@ -60,6 +62,20 @@ var CpCmd = &cli.Command{
 			Required: false,
 			Hidden:   false,
 			Value:    "~/mv_sectors.yaml",
+		},
+		&cli.BoolFlag{
+			Name:     "SkipCheckSrc",
+			Usage:    "if cache is not in the same directory of sealed file, do not continue to look for other directories",
+			Required: false,
+			Hidden:   false,
+			Value:    false,
+		},
+		&cli.BoolFlag{
+			Name:     "UnSealed",
+			Usage:    "Declare whether to copy unsealed files only,default just copy cache and sealed",
+			Required: false,
+			Hidden:   false,
+			Value:    false,
 		},
 	},
 

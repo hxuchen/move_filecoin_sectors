@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	logging "github.com/ipfs/go-log"
-	"move_sectors/mv_common"
+	"move_sectors/cmd"
 	"os"
 	"path"
 	"path/filepath"
@@ -39,7 +39,7 @@ func CheckDiskSize(location string, requiredSize uint64) error {
 		}
 		if diskSize := stat.Blocks * uint64(stat.Bsize); diskSize < requiredSize {
 			err1 = errors.New(
-				fmt.Sprintf("%s, required larger than %.2f GiB avaliable, but %.2f GiB", mv_common.WrongDiskSize,
+				fmt.Sprintf("%s, required larger than %.2f GiB avaliable, but %.2f GiB", main.WrongDiskSize,
 					float64(requiredSize/(1<<30)), float64(diskSize)/(1<<30)))
 			return
 		}
