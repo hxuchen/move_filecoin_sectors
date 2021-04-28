@@ -74,6 +74,10 @@ func startWork(cfg *Config) {
 		allDone := true
 		taskListSingleton.TLock.Lock()
 		for _, t := range taskListSingleton.Ops {
+			if stop {
+				log.Warn("task stopped by signal")
+				return
+			}
 			switch t.getStatus() {
 			case StatusOnWaiting:
 				allDone = false
