@@ -116,6 +116,7 @@ func (t *CacheSealedTask) setStatus(st string) {
 }
 
 func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
+	log.Infof("start tp copy %v", *t)
 	// copy cache
 	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
 	if err != nil {
@@ -144,6 +145,7 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)
+	log.Info("task %v done", *t)
 }
 
 func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {

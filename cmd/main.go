@@ -111,7 +111,7 @@ var CpCmd = &cli.Command{
 		}()
 		log.Info("startWork to copy")
 		startWork(config)
-		log.Info("mv_sectors exited")
+		log.Info("mv_sectors exiting")
 		return nil
 	},
 }
