@@ -1,6 +1,8 @@
-computers:
+srcomputers:
   - ip: 192.168.32.52
-    bindwidth: 1
+    paths:
+      - location: ""
+        current
     limitthreads: 0
     currentthreads: 0
   - ip: 192.168.99.250
@@ -11,6 +13,7 @@ computers:
     bindwidth: 1
     limitthreads: 0
     currentthreads: 0
+
 tasks:
   - srcip: 192.168.32.52
     src: /mnt/32cephtest/cache

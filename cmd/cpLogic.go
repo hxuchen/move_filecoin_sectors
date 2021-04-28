@@ -79,7 +79,7 @@ func startWork(cfg *Config) {
 				allDone = false
 				if t.canDo() {
 					// get one best dst
-					dst, dstIp, err := t.getBestDst()
+					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
 						t.releaseSrcComputer()
 						log.Warn(err)
@@ -87,7 +87,7 @@ func startWork(cfg *Config) {
 					}
 					t.setStatus(StatusOnWorking)
 					t.fullInfo(dst, dstIp)
-					go t.startCopy(cfg)
+					go t.startCopy(cfg, dstPathIdxInComp)
 				}
 			case StatusOnWorking:
 				allDone = false

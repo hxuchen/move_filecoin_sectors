@@ -37,12 +37,14 @@ type TaskList struct {
 
 type Operation interface {
 	canDo() bool
-	getBestDst() (string, string, error)
-	startCopy(cfg *Config)
+	getBestDst() (string, string, int, error)
+	startCopy(cfg *Config, dstPathIdxInComp int)
 	releaseSrcComputer()
 	getStatus() string
-	setStatus(string)
-	fullInfo(string, string)
+	setStatus(st string)
+	fullInfo(dstOri, dstIp string)
+	occupyDstPathThread(idx int, c *Computer)
+	freeDstPathThread(idx int)
 }
 
 func getOneFreeDstComputer() (*Computer, error) {

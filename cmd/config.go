@@ -35,13 +35,6 @@ type Path struct {
 	CurrentThreads int64
 }
 
-type CpTask struct {
-	SrcIp string
-	Src   string
-	DstIp string
-	Dst   string
-}
-
 func getConfig(cctx *cli.Context) (*Config, error) {
 	configFilePath := cctx.String("path")
 	configFilePath, err := mv_utils.GetAbsPath(configFilePath)

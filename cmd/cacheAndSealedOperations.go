@@ -57,10 +57,10 @@ func newCacheSealedTask(sealedSrc, oriSrc, srcIP string) (*CacheSealedTask, erro
 	return task, nil
 }
 
-func (t *CacheSealedTask) getBestDst() (string, string, error) {
+func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	sort.Slice(dstC.Paths, func(i, j int) bool {
@@ -69,15 +69,16 @@ func (t *CacheSealedTask) getBestDst() (string, string, error) {
 		return iw.GreaterThanEqual(jw)
 	})
 
-	for _, p := range dstC.Paths {
+	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
 		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) {
+			t.occupyDstPathThread(idx, dstC)
 			dstC.occupyDstThread()
-			return p.Location, dstC.Ip, nil
+			return p.Location, dstC.Ip, idx, nil
 		}
 	}
-	return "", "", errors.New("no dst has enough size to store for now,will try again later")
+	return "", "", 0, errors.New("no dst has enough size to store for now,will try again later")
 }
 
 func (t *CacheSealedTask) canDo() bool {
@@ -114,7 +115,7 @@ func (t *CacheSealedTask) setStatus(st string) {
 	t.status = st
 }
 
-func (t *CacheSealedTask) startCopy(cfg *Config) {
+func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	// copy cache
 	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
 	if err != nil {
@@ -134,10 +135,26 @@ func (t *CacheSealedTask) startCopy(cfg *Config) {
 	t.setStatus(StatusDone)
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
+	t.freeDstPathThread(dstPathIdxInComp)
 }
 
 func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {
 	t.cacheDstDir = strings.Replace(t.cacheSrcDir, t.oriSrc, dstOri, 1)
 	t.sealedDst = strings.Replace(t.sealedSrc, t.oriSrc, dstOri, 1)
 	t.dstIp = dstIp
+}
+
+func (t *CacheSealedTask) occupyDstPathThread(idx int, c *Computer) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	c.Paths[idx].CurrentThreads++
+	dstComputersMapSingleton.CMap[c.Ip] = *c
+}
+
+func (t *CacheSealedTask) freeDstPathThread(idx int) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	dstComp := dstComputersMapSingleton.CMap[t.dstIp]
+	dstComp.Paths[idx].CurrentThreads--
+	dstComputersMapSingleton.CMap[t.dstIp] = dstComp
 }
