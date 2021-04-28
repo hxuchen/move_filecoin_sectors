@@ -7,6 +7,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,9 +18,15 @@ import (
 func initializeTaskList() error {
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		for _, src := range srcComputer.Paths {
+			if stop {
+				return errors.New("stopped by signal")
+			}
 			if !doUnSealed {
 				sealedSrcDir := strings.TrimRight(src.Location, "/") + "/sealed"
 				err := filepath.Walk(sealedSrcDir, func(path string, info os.FileInfo, err error) error {
+					if stop {
+						return errors.New("stopped by signal")
+					}
 					if info == nil || err != nil {
 						return err
 					}
@@ -30,6 +37,9 @@ func initializeTaskList() error {
 					if err != nil {
 						return err
 					}
+					if os.Getenv("INIT_TASK_DETAIL") == "1" {
+						log.Infof("task %v init done", cacheSealedTask)
+					}
 					taskListSingleton.Ops = append(taskListSingleton.Ops, cacheSealedTask)
 					return err
 				})
@@ -39,6 +49,9 @@ func initializeTaskList() error {
 			} else {
 				unsealedSrcDir := strings.TrimRight(src.Location, "/") + "/unsealed"
 				filepath.Walk(unsealedSrcDir, func(path string, info os.FileInfo, err error) error {
+					if stop {
+						return errors.New("stopped by signal")
+					}
 					if info == nil || err != nil {
 						return err
 					}
@@ -48,6 +61,9 @@ func initializeTaskList() error {
 					unsealedTask, err := newUnSealedTask(path, src.Location, srcComputer.Ip)
 					if err != nil {
 						return err
+					}
+					if os.Getenv("INIT_TASK_DETAIL") == "1" {
+						log.Infof("task %v init done", unsealedTask)
 					}
 					taskListSingleton.Ops = append(taskListSingleton.Ops, unsealedTask)
 					return err
