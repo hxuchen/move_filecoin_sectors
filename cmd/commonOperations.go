@@ -79,15 +79,17 @@ func (c *Computer) freeDstThread() {
 	dstComputersMapSingleton.CMap[c.Ip] = *c
 }
 
-func copyDir(src, dst string, cfg *Config) error {
+func copyDir(srcDir, dst string, cfg *Config) error {
 	if err := mv_utils.MakeDirIfNotExists(dst); err != nil {
 		return err
 	}
-	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if info == nil || err != nil {
 			return err
 		}
-		err = copy(path, dst+"/"+info.Name(), 0, cfg.Chunks)
+		if path != srcDir {
+			err = copy(path, dst+"/"+info.Name(), 0, cfg.Chunks)
+		}
 		return err
 	})
 	return err

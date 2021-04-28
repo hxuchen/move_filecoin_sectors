@@ -94,6 +94,7 @@ func startWork(cfg *Config) {
 		taskListSingleton.TLock.Lock()
 		for _, t := range taskListSingleton.Ops {
 			if stop {
+				taskListSingleton.TLock.Unlock()
 				log.Warn("task stopped by signal")
 				return
 			}
