@@ -120,6 +120,9 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
 	if err != nil {
 		log.Error(err)
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		return
@@ -127,12 +130,17 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	// copy sealed
 	err = copy(t.sealedSrc, t.sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		log.Error(err)
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		return
 	}
+	taskListSingleton.TLock.Lock()
 	t.setStatus(StatusDone)
+	taskListSingleton.TLock.Unlock()
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)

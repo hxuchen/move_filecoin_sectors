@@ -97,12 +97,17 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	// copy unsealed
 	err := copy(t.unSealedSrc, t.unSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		log.Error(err)
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		return
 	}
+	taskListSingleton.TLock.Lock()
 	t.setStatus(StatusDone)
+	taskListSingleton.TLock.Unlock()
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)

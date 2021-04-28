@@ -86,12 +86,7 @@ func startWork(cfg *Config) {
 		return
 	}
 	for {
-		if stop {
-			log.Warn("task stopped by signal")
-			return
-		}
 		allDone := true
-		taskListSingleton.TLock.Lock()
 		for _, t := range taskListSingleton.Ops {
 			if stop {
 				taskListSingleton.TLock.Unlock()
@@ -109,7 +104,9 @@ func startWork(cfg *Config) {
 						log.Warn(err)
 						continue
 					}
+					taskListSingleton.TLock.Lock()
 					t.setStatus(StatusOnWorking)
+					taskListSingleton.TLock.Unlock()
 					t.fullInfo(dst, dstIp)
 					go t.startCopy(cfg, dstPathIdxInComp)
 				}
@@ -118,7 +115,7 @@ func startWork(cfg *Config) {
 			case StatusDone:
 			}
 		}
-		taskListSingleton.TLock.Unlock()
+
 		if allDone {
 			break
 		}
