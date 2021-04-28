@@ -107,7 +107,8 @@ func copy(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 			dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
 			now := time.Now()
 			if srcHash == dstHash && srcHash != "" && dstHash != "" {
-				return fmt.Errorf("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+				log.Info("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+				return nil
 			}
 		}
 	}
