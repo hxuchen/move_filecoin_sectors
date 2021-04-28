@@ -84,6 +84,9 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 		return err
 	}
 	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if stop {
+			return nil
+		}
 		if info == nil || err != nil {
 			return err
 		}
