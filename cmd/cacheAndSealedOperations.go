@@ -68,7 +68,7 @@ func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
 		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 		return iw.GreaterThanEqual(jw)
 	})
-
+	fmt.Println(dstC.Paths)
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
