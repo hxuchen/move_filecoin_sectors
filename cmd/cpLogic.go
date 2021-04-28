@@ -37,7 +37,7 @@ func initializeTaskList() error {
 					if err != nil {
 						return err
 					}
-					if os.Getenv("INIT_TASK_DETAIL") == "1" {
+					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
 						log.Infof("task %v init done", cacheSealedTask)
 					}
 					taskListSingleton.Ops = append(taskListSingleton.Ops, cacheSealedTask)
