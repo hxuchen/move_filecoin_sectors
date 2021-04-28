@@ -18,7 +18,7 @@ import (
 	"os"
 )
 
-func CalFileSha256(filePath string, size int64, chunks int64) (string, error) {
+func CalFileHash(filePath string, size int64, chunks int64) (string, error) {
 	raw, err := MakeCalData(filePath, size, chunks)
 	if err != nil {
 		return "", err

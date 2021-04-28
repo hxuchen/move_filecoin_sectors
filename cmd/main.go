@@ -11,19 +11,26 @@ import (
 	"move_sectors/build"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync"
 	"syscall"
 )
 
 var (
-	log                   = logging.Logger("main")
-	computersMapSingleton = ComputersMap{
+	log                      = logging.Logger("main")
+	srcComputersMapSingleton = ComputersMap{
+		CMap:  make(map[string]Computer),
+		CLock: new(sync.Mutex),
+	}
+	dstComputersMapSingleton = ComputersMap{
 		CMap:  make(map[string]Computer),
 		CLock: new(sync.Mutex),
 	}
 	stop              = false
-	threadControlChan = make(chan struct{}, runtime.NumCPU())
+	doUnSealed        = false
+	taskListSingleton = TaskList{
+		Ops:   make([]Operation, 0),
+		TLock: new(sync.Mutex),
+	}
 )
 
 /*
@@ -54,7 +61,7 @@ func main() {
 
 var CpCmd = &cli.Command{
 	Name:  "run",
-	Usage: "start to copy files",
+	Usage: "startWork to copy files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     "path",
@@ -62,13 +69,6 @@ var CpCmd = &cli.Command{
 			Required: false,
 			Hidden:   false,
 			Value:    "~/mv_sectors.yaml",
-		},
-		&cli.BoolFlag{
-			Name:     "SkipCheckSrc",
-			Usage:    "if cache is not in the same directory of sealed file, do not continue to look for other directories",
-			Required: false,
-			Hidden:   false,
-			Value:    false,
 		},
 		&cli.BoolFlag{
 			Name:     "UnSealed",
@@ -80,7 +80,7 @@ var CpCmd = &cli.Command{
 	},
 
 	Action: func(cctx *cli.Context) error {
-		log.Infof("start move_sector,version:%s", build.GetVersion())
+		log.Infof("startWork move_sector,version:%s", build.GetVersion())
 		lock, err2 := createFileLock(os.TempDir(), "move_sectors.lock")
 		if err2 != nil {
 			log.Error(err2)
@@ -98,6 +98,9 @@ var CpCmd = &cli.Command{
 			log.Error(err)
 			return nil
 		}
+		if cctx.Bool("UnSealed") {
+			doUnSealed = true
+		}
 		stopSignal := make(chan os.Signal, 2)
 		signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
 		go func() {
@@ -106,8 +109,8 @@ var CpCmd = &cli.Command{
 				stop = true
 			}
 		}()
-		log.Info("start to copy")
-		start(config)
+		log.Info("startWork to copy")
+		startWork(config)
 		log.Info("mv_sectors exited")
 		return nil
 	},

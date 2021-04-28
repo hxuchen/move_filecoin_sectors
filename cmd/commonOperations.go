@@ -1,0 +1,199 @@
+/**
+ _*_ @Author: IronHuang _*_
+ _*_ @blog:https://www.dvpos.com/ _*_
+ _*_ @Date: 2021/4/27 下午4:50 _*_
+**/
+
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"move_sectors/mv_utils"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+)
+
+const (
+	StatusOnWaiting = "StatusOnWaiting"
+	StatusOnWorking = "StatusOnWorking"
+	StatusDone      = "StatusDone"
+)
+
+type ComputersMap struct {
+	CMap  map[string]Computer
+	CLock *sync.Mutex
+}
+
+type TaskList struct {
+	Ops   []Operation
+	TLock *sync.Mutex
+}
+
+type Operation interface {
+	canDo() bool
+	getBestDst() (string, string, error)
+	startCopy(cfg *Config)
+	releaseSrcComputer()
+	getStatus() string
+	setStatus(string)
+	fullInfo(string, string)
+}
+
+func getOneFreeDstComputer() (*Computer, error) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	for _, com := range dstComputersMapSingleton.CMap {
+		if com.CurrentThreads < com.LimitThread {
+			com.occupySrcThread()
+			return &com, nil
+		}
+	}
+	return nil, errors.New("no free dst computers for now")
+}
+
+func (c *Computer) occupySrcThread() {
+	c.CurrentThreads++
+	srcComputersMapSingleton.CMap[c.Ip] = *c
+}
+
+func (c *Computer) freeSrcThread() {
+	c.CurrentThreads--
+	dstComputersMapSingleton.CMap[c.Ip] = *c
+}
+
+func (c *Computer) occupyDstThread() {
+	c.CurrentThreads++
+	srcComputersMapSingleton.CMap[c.Ip] = *c
+}
+
+func (c *Computer) freeDstThread() {
+	c.CurrentThreads--
+	dstComputersMapSingleton.CMap[c.Ip] = *c
+}
+
+func copyDir(src, dst string, cfg *Config) error {
+	if err := mv_utils.MakeDirIfNotExists(dst); err != nil {
+		return err
+	}
+	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if info == nil || err != nil {
+			return err
+		}
+		err = copy(path, dst+"/"+info.Name(), 0, cfg.Chunks)
+		return err
+	})
+	return err
+}
+
+func copy(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
+	statSrc, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	statDst, err := os.Stat(dst)
+	if err == nil {
+		if statDst.Size() == statSrc.Size() {
+			srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), chunks)
+			dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
+			now := time.Now()
+			if srcHash == dstHash && srcHash != "" && dstHash != "" {
+				return fmt.Errorf("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+			}
+		}
+	}
+
+	const BufferSize = 1 * 1024 * 1024
+	buf := make([]byte, BufferSize)
+
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err2 := source.Close()
+		if err2 != nil && err == nil {
+			err = err2
+		}
+	}()
+
+	err = mv_utils.MakeDirIfNotExists(path.Dir(dst))
+	if err != nil {
+		return err
+	}
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err2 := destination.Close()
+		if err2 != nil && err == nil {
+			err = err2
+		}
+	}()
+	readed := 0
+	for {
+		if stop {
+			return errors.New("stop by syscall")
+		}
+
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		// 限速
+		readed += len(buf)
+		if singleThreadMBPS != 0 {
+			if readed >= (singleThreadMBPS << 20) {
+				readed = 0
+				time.Sleep(time.Second * 1)
+			}
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
+	return
+}
+
+func checkAndFindCacheSrc(cacheSrcDir, oriSrc string) string {
+	// verify all src files existed, if not existed, find all computers
+	var needFindCacheSrcDir bool
+	if _, errCacheSrcDir := os.Stat(cacheSrcDir); errCacheSrcDir != nil && os.IsNotExist(errCacheSrcDir) {
+		cacheSrcDir = ""
+		needFindCacheSrcDir = true
+	}
+	if needFindCacheSrcDir {
+		var errFind error
+	FindCacheSrcLoopCache:
+		for _, comp := range srcComputersMapSingleton.CMap {
+			for _, singlePath := range comp.Paths {
+				cacheSrcDirTmp := strings.Replace(cacheSrcDir, oriSrc, strings.TrimRight(singlePath.Location, "/"), 1)
+				if _, errFind = os.Stat(cacheSrcDirTmp); errFind == nil {
+					cacheSrcDir = cacheSrcDirTmp
+					break FindCacheSrcLoopCache
+				}
+			}
+		}
+	}
+	return cacheSrcDir
+}

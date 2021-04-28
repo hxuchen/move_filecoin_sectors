@@ -1,4 +1,4 @@
-package main
+package move_common
 
 const (
 	WrongDiskSize        string = "WrongDiskSize"

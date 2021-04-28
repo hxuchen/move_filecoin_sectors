@@ -7,89 +7,137 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"github.com/filecoin-project/go-state-types/big"
+	"move_sectors/move_common"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
-	"time"
+	"syscall"
 )
 
-type cacheSealedTask struct {
+type CacheSealedTask struct {
 	srcIp       string
+	oriSrc      string
 	dstIp       string
 	cacheSrcDir string
 	sealedSrc   string
 	cacheDstDir string
 	sealedDst   string
+	totalSize   int64
+	status      string
 }
 
-func newCacheSealedTask(sealedSrc, oriSrc, oriDst, srcIP, dstIP string, skipCheckSrc bool) (*cacheSealedTask, error) {
-	var task = new(cacheSealedTask)
+func newCacheSealedTask(sealedSrc, oriSrc, srcIP string) (*CacheSealedTask, error) {
+	var task = new(CacheSealedTask)
 	oriSrc = strings.TrimRight(oriSrc, "/")
-	oriDst = strings.TrimRight(oriDst, "/")
 	cacheSrcDir := oriSrc + "/" + "cache"
 
-	if !skipCheckSrc {
-		cacheSrcDir = checkAndFindCacheSrc(cacheSrcDir, oriSrc)
-		if cacheSrcDir == "" {
-			return task, fmt.Errorf("%s: %s", SourceFileNotExisted, cacheSrcDir)
-		}
+	cacheSrcDir = checkAndFindCacheSrc(cacheSrcDir, oriSrc)
+	if cacheSrcDir == "" {
+		return task, fmt.Errorf("%s: %s", move_common.SourceFileNotExisted, cacheSrcDir)
 	}
-	// splice dst paths
-	sealedDst := strings.Replace(sealedSrc, oriSrc, oriDst, 1)
-	cacheDstDir := strings.Replace(cacheSrcDir, oriSrc, oriDst, 1)
+
+	var totalSize int64
+	_ = filepath.Walk(cacheSrcDir, func(path string, info os.FileInfo, err error) error {
+		totalSize += info.Size()
+		return nil
+	})
+	sealedSrcInfo, _ := os.Stat(sealedSrc)
+	totalSize += sealedSrcInfo.Size()
 
 	task.srcIp = srcIP
-	task.dstIp = dstIP
+	task.oriSrc = oriSrc
 	task.cacheSrcDir = cacheSrcDir
 	task.sealedSrc = sealedSrc
-	task.sealedDst = sealedDst
-	task.cacheDstDir = cacheDstDir
-
+	task.totalSize = totalSize
+	task.status = StatusOnWaiting
 	return task, nil
 }
 
-func (t *cacheSealedTask) canDo() {
-	computersMapSingleton.CLock.Lock()
-	defer computersMapSingleton.CLock.Unlock()
-	srcComputer := computersMapSingleton.CMap[t.srcIp]
-	dstComputer := computersMapSingleton.CMap[t.dstIp]
-	for {
-		if srcComputer.CurrentThreads < srcComputer.LimitThread && dstComputer.CurrentThreads < dstComputer.LimitThread {
-			threadControlChan <- struct{}{}
-			break
-		}
-		time.Sleep(time.Second)
+func (t *CacheSealedTask) getBestDst() (string, string, error) {
+	dstC, err := getOneFreeDstComputer()
+	if err != nil {
+		return "", "", err
 	}
+
+	sort.Slice(dstC.Paths, func(i, j int) bool {
+		iw := big.NewInt(dstC.Paths[i].CurrentThreads)
+		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
+		return iw.GreaterThanEqual(jw)
+	})
+
+	for _, p := range dstC.Paths {
+		var stat = new(syscall.Statfs_t)
+		_ = syscall.Statfs(p.Location, stat)
+		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) {
+			dstC.occupyDstThread()
+			return p.Location, dstC.Ip, nil
+		}
+	}
+	return "", "", errors.New("no dst has enough size to store for now,will try again later")
 }
 
-func (t *cacheSealedTask) startCopy() {
+func (t *CacheSealedTask) canDo() bool {
+	srcComputersMapSingleton.CLock.Lock()
+	defer srcComputersMapSingleton.CLock.Unlock()
+	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
+	if srcComputer.CurrentThreads < srcComputer.LimitThread {
+		srcComputer.occupySrcThread()
+		return true
+	}
+	return false
+}
+
+func (t *CacheSealedTask) releaseSrcComputer() {
+	srcComputersMapSingleton.CLock.Lock()
+	defer srcComputersMapSingleton.CLock.Unlock()
+	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
+	srcComputer.freeSrcThread()
+}
+
+func (t *CacheSealedTask) releaseDstComputer() {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	dstComputer := dstComputersMapSingleton.CMap[t.dstIp]
+	dstComputer.freeDstThread()
+	dstComputersMapSingleton.CMap[t.dstIp] = dstComputer
+}
+
+func (t *CacheSealedTask) getStatus() string {
+	return t.status
+}
+
+func (t *CacheSealedTask) setStatus(st string) {
+	t.status = st
+}
+
+func (t *CacheSealedTask) startCopy(cfg *Config) {
 	// copy cache
-
+	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
+	if err != nil {
+		log.Error(err)
+		t.releaseSrcComputer()
+		t.releaseDstComputer()
+		return
+	}
 	// copy sealed
-
-	// copy unsealed
-
+	err = copy(t.sealedSrc, t.sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	if err != nil {
+		log.Error(err)
+		t.releaseSrcComputer()
+		t.releaseDstComputer()
+		return
+	}
+	t.setStatus(StatusDone)
+	t.releaseSrcComputer()
+	t.releaseDstComputer()
 }
 
-func checkAndFindCacheSrc(cacheSrcDir, oriSrc string) string {
-	// verify all src files existed, if not existed, find all computers
-	var needFindCacheSrcDir bool
-	if _, errCacheSrcDir := os.Stat(cacheSrcDir); errCacheSrcDir != nil && os.IsNotExist(errCacheSrcDir) {
-		cacheSrcDir = ""
-		needFindCacheSrcDir = true
-	}
-	if needFindCacheSrcDir {
-		var errFind error
-	FindCacheSrcLoopCache:
-		for _, comp := range computersMapSingleton.CMap {
-			for _, singlePath := range comp.Path {
-				cacheSrcDirTmp := strings.Replace(cacheSrcDir, oriSrc, strings.TrimRight(singlePath, "/"), 1)
-				if _, errFind = os.Stat(cacheSrcDirTmp); errFind == nil {
-					cacheSrcDir = cacheSrcDirTmp
-					break FindCacheSrcLoopCache
-				}
-			}
-		}
-	}
-	return cacheSrcDir
+func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {
+	t.cacheDstDir = strings.Replace(t.cacheSrcDir, t.oriSrc, dstOri, 1)
+	t.sealedDst = strings.Replace(t.sealedSrc, t.oriSrc, dstOri, 1)
+	t.dstIp = dstIp
 }

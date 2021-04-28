@@ -13,7 +13,6 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"move_sectors/mv_utils"
-	"sync"
 )
 
 type Config struct {
@@ -25,17 +24,15 @@ type Config struct {
 
 type Computer struct {
 	Ip             string
-	Path           []string
+	Paths          []Path
 	BandWidth      int
 	LimitThread    int
 	CurrentThreads int
-	TotalSize      uint64
-	AvailableSize  uint64
 }
 
-type ComputersMap struct {
-	CMap  map[string]Computer
-	CLock *sync.Mutex
+type Path struct {
+	Location       string
+	CurrentThreads int64
 }
 
 type CpTask struct {
@@ -94,39 +91,44 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 	return true, nil
 }
 
-func hasEnoughSpaceToStore(src, dst string) (bool, error) {
-	srcSize, err := mv_utils.GetSrcSize(src)
-	if err != nil {
-		return false, fmt.Errorf("src path: %s %v", src, err)
-	}
-	availableSize, err := mv_utils.GetAvailableSize(dst)
-	if err != nil {
-		return false, fmt.Errorf("dst path: %s %v", dst, err)
-	}
-	if availableSize <= srcSize {
-		return false, fmt.Errorf("dst: %s has no enough space to store all files from %s", dst, src)
-	}
-	return true, nil
-}
-
 func initializeComputerMapSingleton(cfg *Config) error {
 	for _, v := range cfg.SrcComputers {
-		if v.Ip == "" || v.BandWidth == 0 || len(v.Path) == 0 {
+		if v.Ip == "" || v.BandWidth == 0 || len(v.Paths) == 0 {
 			return errors.New("invalid computer ip, BandWidth or paths; please check the config")
 		}
-		if _, ok := computersMapSingleton.CMap[v.Ip]; !ok {
+		if _, ok := srcComputersMapSingleton.CMap[v.Ip]; !ok {
 			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
-			computersMapSingleton.CMap[v.Ip] = v
+			srcComputersMapSingleton.CMap[v.Ip] = v
 			checkDoubled := make(map[string]struct{})
-			for _, path := range v.Path {
-				if _, ok = checkDoubled[path]; ok {
+			for _, path := range v.Paths {
+				if _, ok = checkDoubled[path.Location]; ok {
 					return fmt.Errorf("doubled path:%s in same ip:%s", path, v.Ip)
 				}
-				checkDoubled[path] = struct{}{}
+				checkDoubled[path.Location] = struct{}{}
 			}
 		} else {
 			return errors.New("double computer ip,please check the config")
 		}
 	}
+
+	for _, v := range cfg.DstComputers {
+		if v.Ip == "" || v.BandWidth == 0 || len(v.Paths) == 0 {
+			return errors.New("invalid computer ip, BandWidth or paths; please check the config")
+		}
+		if _, ok := dstComputersMapSingleton.CMap[v.Ip]; !ok {
+			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
+			dstComputersMapSingleton.CMap[v.Ip] = v
+			checkDoubled := make(map[string]struct{})
+			for _, path := range v.Paths {
+				if _, ok = checkDoubled[path.Location]; ok {
+					return fmt.Errorf("doubled path:%s in same ip:%s", path, v.Ip)
+				}
+				checkDoubled[path.Location] = struct{}{}
+			}
+		} else {
+			return errors.New("double computer ip,please check the config")
+		}
+	}
+
 	return nil
 }
