@@ -56,6 +56,7 @@ func initializeTaskList() error {
 			}
 		}
 	}
+	log.Info("tasks init done")
 	return nil
 }
 

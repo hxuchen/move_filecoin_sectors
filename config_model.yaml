@@ -1,4 +1,4 @@
-srcomputers:
+srccomputers:
   - ip: 192.168.32.52
     paths:
       - location: "/mnt/32cephtest"
