@@ -30,10 +30,10 @@ type CacheSealedTask struct {
 	status      string
 }
 
-func newCacheSealedTask(sealedSrc, oriSrc, srcIP string) (*CacheSealedTask, error) {
+func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealedTask, error) {
 	var task = new(CacheSealedTask)
 	oriSrc = strings.TrimRight(oriSrc, "/")
-	cacheSrcDir := oriSrc + "/" + "cache"
+	cacheSrcDir := oriSrc + "/" + "cache" + "/" + sealedId
 
 	cacheSrcDir = checkAndFindCacheSrc(cacheSrcDir, oriSrc)
 	if cacheSrcDir == "" {

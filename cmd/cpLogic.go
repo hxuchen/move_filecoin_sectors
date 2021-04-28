@@ -33,7 +33,7 @@ func initializeTaskList() error {
 					if !info.Mode().IsRegular() {
 						return nil
 					}
-					cacheSealedTask, err := newCacheSealedTask(path, src.Location, srcComputer.Ip)
+					cacheSealedTask, err := newCacheSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
 					if err != nil {
 						return err
 					}
@@ -48,7 +48,7 @@ func initializeTaskList() error {
 				}
 			} else {
 				unsealedSrcDir := strings.TrimRight(src.Location, "/") + "/unsealed"
-				filepath.Walk(unsealedSrcDir, func(path string, info os.FileInfo, err error) error {
+				err := filepath.Walk(unsealedSrcDir, func(path string, info os.FileInfo, err error) error {
 					if stop {
 						return errors.New("stopped by signal")
 					}
@@ -68,7 +68,9 @@ func initializeTaskList() error {
 					taskListSingleton.Ops = append(taskListSingleton.Ops, unsealedTask)
 					return err
 				})
-
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
