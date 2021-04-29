@@ -85,6 +85,7 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
+	log.Info(taskListSingleton)
 	for {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
