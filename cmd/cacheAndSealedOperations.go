@@ -85,7 +85,6 @@ func (t *CacheSealedTask) canDo() bool {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
-		fmt.Println(srcComputer.CurrentThreads)
 		srcComputer.CurrentThreads++
 		srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
 		return true
@@ -175,5 +174,4 @@ func (t *CacheSealedTask) freeDstPathThread(idx int) {
 	dstComp := dstComputersMapSingleton.CMap[t.dstIp]
 	dstComp.Paths[idx].CurrentThreads--
 	dstComputersMapSingleton.CMap[t.dstIp] = dstComp
-	fmt.Println(dstComputersMapSingleton.CMap[t.dstIp])
 }
