@@ -86,6 +86,7 @@ func (t *CacheSealedTask) canDo() bool {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
+		fmt.Println(srcComputer.CurrentThreads)
 		srcComputer.occupySrcThread()
 		return true
 	}

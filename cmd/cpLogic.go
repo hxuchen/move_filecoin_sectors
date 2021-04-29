@@ -96,8 +96,6 @@ func startWork(cfg *Config) {
 			switch t.getStatus() {
 			case StatusOnWaiting:
 				allDone = false
-				t.printInfo()
-				fmt.Println(t.canDo())
 				if t.canDo() {
 					// get one best dst
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
