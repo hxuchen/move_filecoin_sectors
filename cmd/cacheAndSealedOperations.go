@@ -167,4 +167,5 @@ func (t *CacheSealedTask) freeDstPathThread(idx int) {
 	dstComp := dstComputersMapSingleton.CMap[t.dstIp]
 	dstComp.Paths[idx].CurrentThreads--
 	dstComputersMapSingleton.CMap[t.dstIp] = dstComp
+	fmt.Println(dstComputersMapSingleton.CMap[t.dstIp])
 }
