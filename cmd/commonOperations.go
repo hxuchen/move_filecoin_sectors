@@ -73,10 +73,10 @@ func getOneFreeDstComputer() (*Computer, error) {
 //	dstComputersMapSingleton.CMap[c.Ip] = *c
 //}
 
-func (c *Computer) occupyDstThread() {
-	c.CurrentThreads++
-	srcComputersMapSingleton.CMap[c.Ip] = *c
-}
+//func (c *Computer) occupyDstThread() {
+//	c.CurrentThreads++
+//	srcComputersMapSingleton.CMap[c.Ip] = *c
+//}
 
 //func (c *Computer) freeDstThread() {
 //	c.CurrentThreads--
