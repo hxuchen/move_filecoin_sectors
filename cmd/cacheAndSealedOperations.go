@@ -68,7 +68,6 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 		return iw.GreaterThanEqual(jw)
 	})
-	fmt.Println(dstC.Paths)
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
@@ -145,7 +144,7 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)
-	log.Info("task %v done", *t)
+	log.Infof("task %v done", *t)
 }
 
 func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {
