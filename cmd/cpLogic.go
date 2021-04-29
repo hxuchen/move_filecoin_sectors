@@ -41,6 +41,7 @@ func initializeTaskList() error {
 					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
 						log.Infof("task %v init done", cacheSealedTask)
 					}
+					fmt.Println(cacheSealedTask)
 					taskListSingleton.Ops = append(taskListSingleton.Ops, cacheSealedTask)
 					return err
 				})
@@ -85,9 +86,6 @@ func startWork(cfg *Config) {
 	if err != nil {
 		log.Error(err)
 		return
-	}
-	for _, v := range taskListSingleton.Ops {
-		fmt.Println(interface{}(v).(CacheSealedTask))
 	}
 	for {
 		allDone := true
