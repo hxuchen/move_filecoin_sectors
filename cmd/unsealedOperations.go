@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/filecoin-project/go-state-types/big"
 	"os"
 	"sort"
@@ -33,6 +34,10 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP string) (*UnSealedTask, error) {
 	task.totalSize = stat.Size()
 	task.status = StatusOnWaiting
 	return task, nil
+}
+
+func (t *UnSealedTask) printInfo() {
+	fmt.Println(*t)
 }
 
 func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, int, error) {

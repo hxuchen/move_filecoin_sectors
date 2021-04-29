@@ -92,6 +92,10 @@ func (t *CacheSealedTask) canDo() bool {
 	return false
 }
 
+func (t *CacheSealedTask) printInfo() {
+	fmt.Println(*t)
+}
+
 func (t *CacheSealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
