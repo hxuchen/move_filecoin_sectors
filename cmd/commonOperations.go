@@ -40,6 +40,7 @@ type Operation interface {
 	getBestDst(singlePathThreadLimit int) (string, string, int, error)
 	startCopy(cfg *Config, dstPathIdxInComp int)
 	releaseSrcComputer()
+	releaseDstComputer()
 	getStatus() string
 	setStatus(st string)
 	fullInfo(dstOri, dstIp string)
@@ -52,7 +53,7 @@ func getOneFreeDstComputer() (*Computer, error) {
 	defer dstComputersMapSingleton.CLock.Unlock()
 	for _, com := range dstComputersMapSingleton.CMap {
 		if com.CurrentThreads < com.LimitThread {
-			com.occupySrcThread()
+			com.occupyDstThread()
 			return &com, nil
 		}
 	}

@@ -68,12 +68,14 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 		return iw.GreaterThanEqual(jw)
 	})
+	log.Errorf("getBestDst  %v", dstC.Paths)
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
 		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
 			t.occupyDstPathThread(idx, dstC)
 			dstC.occupyDstThread()
+			log.Errorf("getBestDst dstc %v", *dstC)
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}

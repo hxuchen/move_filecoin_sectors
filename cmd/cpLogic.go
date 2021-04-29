@@ -41,7 +41,6 @@ func initializeTaskList() error {
 					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
 						log.Infof("task %v init done", cacheSealedTask)
 					}
-					fmt.Println(cacheSealedTask)
 					taskListSingleton.Ops = append(taskListSingleton.Ops, cacheSealedTask)
 					return err
 				})
@@ -87,7 +86,7 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
-	for {
+	for i := 0; ; i++ {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
 			if stop {
@@ -102,6 +101,7 @@ func startWork(cfg *Config) {
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
 					if err != nil {
 						t.releaseSrcComputer()
+						t.releaseDstComputer()
 						log.Warn(err)
 						continue
 					}
@@ -121,6 +121,7 @@ func startWork(cfg *Config) {
 			break
 		}
 		time.Sleep(time.Second * 5)
+		fmt.Println(i)
 	}
 	log.Info("all task done")
 }
