@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"move_sectors/move_common"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,9 +100,15 @@ func startWork(cfg *Config) {
 					// get one best dst
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
 					if err != nil {
+						if err.Error() != move_common.NoDstSuitableForNow {
+							log.Warn(err)
+						} else {
+							if os.Getenv("SHOW_LOG_DETAIL") == "1" {
+								log.Warn(err)
+							}
+						}
 						t.releaseSrcComputer()
 						t.releaseDstComputer()
-						log.Warn(err)
 						continue
 					}
 					taskListSingleton.TLock.Lock()

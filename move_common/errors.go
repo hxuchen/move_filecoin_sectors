@@ -1,6 +1,7 @@
 package move_common
 
 const (
-	WrongDiskSize        string = "WrongDiskSize"
-	SourceFileNotExisted        = "SourceFileNotExisted"
+	WrongDiskSize        = "WrongDiskSize"
+	SourceFileNotExisted = "SourceFileNotExisted"
+	NoDstSuitableForNow  = "NoDstSuitableForNow"
 )

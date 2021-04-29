@@ -63,8 +63,6 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 		return "", "", 0, err
 	}
 
-	fmt.Printf("%v \n", dstComputersMapSingleton)
-
 	sort.Slice(dstC.Paths, func(i, j int) bool {
 		iw := big.NewInt(dstC.Paths[i].CurrentThreads)
 		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
@@ -79,7 +77,7 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
-	return "", "", 0, errors.New("no dst suitable for now,will try again later")
+	return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 }
 
 func (t *CacheSealedTask) canDo() bool {

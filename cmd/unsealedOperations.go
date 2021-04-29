@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/filecoin-project/go-state-types/big"
+	"move_sectors/move_common"
 	"os"
 	"sort"
 	"strings"
@@ -61,7 +62,7 @@ func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, in
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
-	return "", "", 0, errors.New("no dst suitable for now,will try again later")
+	return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 }
 
 func (t *UnSealedTask) canDo() bool {
