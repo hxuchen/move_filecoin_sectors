@@ -29,6 +29,7 @@ type UnSealedTask struct {
 func newUnSealedTask(unSealedSrc, oriSrc, srcIP string) (*UnSealedTask, error) {
 	var task = new(UnSealedTask)
 	task.srcIp = srcIP
+	task.oriSrc = oriSrc
 	task.unSealedSrc = unSealedSrc
 	stat, _ := os.Stat(unSealedSrc)
 	task.totalSize = stat.Size()
@@ -57,7 +58,6 @@ func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, in
 		_ = syscall.Statfs(p.Location, stat)
 		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
 			t.occupyDstPathThread(idx, dstC)
-			dstC.occupyDstThread()
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
@@ -69,7 +69,8 @@ func (t *UnSealedTask) canDo() bool {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
-		srcComputer.occupySrcThread()
+		srcComputer.CurrentThreads++
+		srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
 		return true
 	}
 	return false

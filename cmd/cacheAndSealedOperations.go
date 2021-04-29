@@ -74,7 +74,6 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 		_ = syscall.Statfs(p.Location, stat)
 		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
 			t.occupyDstPathThread(idx, dstC)
-			dstC.occupyDstThread()
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
@@ -87,7 +86,8 @@ func (t *CacheSealedTask) canDo() bool {
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
 		fmt.Println(srcComputer.CurrentThreads)
-		srcComputer.occupySrcThread()
+		srcComputer.CurrentThreads++
+		srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
 		return true
 	}
 	return false

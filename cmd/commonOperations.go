@@ -54,17 +54,19 @@ func getOneFreeDstComputer() (*Computer, error) {
 	defer dstComputersMapSingleton.CLock.Unlock()
 	for _, com := range dstComputersMapSingleton.CMap {
 		if com.CurrentThreads < com.LimitThread {
-			com.occupyDstThread()
+			com.CurrentThreads++
+			srcComputersMapSingleton.CMap[com.Ip] = com
 			return &com, nil
 		}
 	}
 	return nil, errors.New("no free dst computers for now")
 }
 
-func (c *Computer) occupySrcThread() {
-	c.CurrentThreads++
-	srcComputersMapSingleton.CMap[c.Ip] = *c
-}
+//
+//func (c *Computer) occupySrcThread() {
+//	c.CurrentThreads++
+//	srcComputersMapSingleton.CMap[c.Ip] = *c
+//}
 
 //func (c *Computer) freeSrcThread() {
 //	c.CurrentThreads--
