@@ -89,6 +89,7 @@ func startWork(cfg *Config) {
 	for i := 0; ; i++ {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
+			log.Error(t.getStatus())
 			if stop {
 				log.Warn("task stopped by signal")
 				return
