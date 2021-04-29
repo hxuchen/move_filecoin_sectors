@@ -78,7 +78,7 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
-	return "", "", 0, errors.New("no dst has enough size to store for now,will try again later")
+	return "", "", 0, errors.New("no dst suitable for now,will try again later")
 }
 
 func (t *CacheSealedTask) canDo() bool {
