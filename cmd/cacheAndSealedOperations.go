@@ -95,14 +95,15 @@ func (t *CacheSealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
-	srcComputer.freeSrcThread()
+	srcComputer.CurrentThreads--
+	dstComputersMapSingleton.CMap[t.srcIp] = srcComputer
 }
 
 func (t *CacheSealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComputer := dstComputersMapSingleton.CMap[t.dstIp]
-	dstComputer.freeDstThread()
+	dstComputer.CurrentThreads--
 	dstComputersMapSingleton.CMap[t.dstIp] = dstComputer
 }
 

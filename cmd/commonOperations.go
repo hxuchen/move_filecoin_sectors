@@ -64,20 +64,20 @@ func (c *Computer) occupySrcThread() {
 	srcComputersMapSingleton.CMap[c.Ip] = *c
 }
 
-func (c *Computer) freeSrcThread() {
-	c.CurrentThreads--
-	dstComputersMapSingleton.CMap[c.Ip] = *c
-}
+//func (c *Computer) freeSrcThread() {
+//	c.CurrentThreads--
+//	dstComputersMapSingleton.CMap[c.Ip] = *c
+//}
 
 func (c *Computer) occupyDstThread() {
 	c.CurrentThreads++
 	srcComputersMapSingleton.CMap[c.Ip] = *c
 }
 
-func (c *Computer) freeDstThread() {
-	c.CurrentThreads--
-	dstComputersMapSingleton.CMap[c.Ip] = *c
-}
+//func (c *Computer) freeDstThread() {
+//	c.CurrentThreads--
+//	dstComputersMapSingleton.CMap[c.Ip] = *c
+//}
 
 func copyDir(srcDir, dst string, cfg *Config) error {
 	if err := mv_utils.MakeDirIfNotExists(dst); err != nil {
