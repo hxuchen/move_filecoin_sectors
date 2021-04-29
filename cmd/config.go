@@ -16,10 +16,11 @@ import (
 )
 
 type Config struct {
-	SrcComputers     []Computer
-	DstComputers     []Computer
-	SingleThreadMBPS int
-	Chunks           int64
+	SrcComputers          []Computer
+	DstComputers          []Computer
+	SingleThreadMBPS      int
+	SinglePathThreadLimit int
+	Chunks                int64
 }
 
 type Computer struct {
@@ -71,6 +72,9 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 	}
 	if cfg.DstComputers == nil {
 		return false, fmt.Errorf("dst computers is nil")
+	}
+	if cfg.SinglePathThreadLimit <= 0 {
+		return false, errors.New("invalid single path thread limit")
 	}
 	if err := initializeComputerMapSingleton(cfg); err != nil {
 		return false, err

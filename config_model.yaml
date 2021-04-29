@@ -19,4 +19,5 @@ dstcomputers:
     limitthreads: 0
     currentthreads: 0
 singlethreadmbps: 50 # MB/s
+singlepaththreadlimit: 3
 chunks: 10

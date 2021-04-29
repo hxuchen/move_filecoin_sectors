@@ -97,7 +97,7 @@ func startWork(cfg *Config) {
 				allDone = false
 				if t.canDo() {
 					// get one best dst
-					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
+					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
 					if err != nil {
 						t.releaseSrcComputer()
 						log.Warn(err)

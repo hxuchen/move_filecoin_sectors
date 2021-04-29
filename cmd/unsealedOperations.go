@@ -35,7 +35,7 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP string) (*UnSealedTask, error) {
 	return task, nil
 }
 
-func (t *UnSealedTask) getBestDst() (string, string, int, error) {
+func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
 		return "", "", 0, err
@@ -50,13 +50,13 @@ func (t *UnSealedTask) getBestDst() (string, string, int, error) {
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
-		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) {
+		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
 			t.occupyDstPathThread(idx, dstC)
 			dstC.occupyDstThread()
 			return p.Location, dstC.Ip, idx, nil
 		}
 	}
-	return "", "", 0, errors.New("no dst has enough size to store for now,will try again later")
+	return "", "", 0, errors.New("no dst suitable for now,will try again later")
 }
 
 func (t *UnSealedTask) canDo() bool {
