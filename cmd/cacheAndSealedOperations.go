@@ -63,6 +63,8 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 		return "", "", 0, err
 	}
 
+	fmt.Printf("%v \n", dstComputersMapSingleton)
+
 	sort.Slice(dstC.Paths, func(i, j int) bool {
 		iw := big.NewInt(dstC.Paths[i].CurrentThreads)
 		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
@@ -102,7 +104,7 @@ func (t *CacheSealedTask) releaseSrcComputer() {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	srcComputer.CurrentThreads--
-	dstComputersMapSingleton.CMap[t.srcIp] = srcComputer
+	srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
 }
 
 func (t *CacheSealedTask) releaseDstComputer() {
@@ -122,8 +124,8 @@ func (t *CacheSealedTask) setStatus(st string) {
 }
 
 func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	log.Infof("start tp copy %v", *t)
-	// copy cache
+	log.Infof("start tp copying %v", *t)
+	// copying cache
 	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
 	if err != nil {
 		log.Error(err)
@@ -135,8 +137,8 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.freeDstPathThread(dstPathIdxInComp)
 		return
 	}
-	// copy sealed
-	err = copy(t.sealedSrc, t.sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	// copying sealed
+	err = copying(t.sealedSrc, t.sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
 		taskListSingleton.TLock.Lock()
 		t.setStatus(StatusOnWaiting)

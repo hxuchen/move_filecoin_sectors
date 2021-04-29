@@ -80,7 +80,7 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 		return false, err
 	}
 	if cfg.SingleThreadMBPS == 0 {
-		return false, fmt.Errorf("SingleThreadMBPS should not be zero,if you want to exit or hold copy,please use stop cmd or hold cmd")
+		return false, fmt.Errorf("SingleThreadMBPS should not be zero,if you want to exit or hold copying,please use stop cmd or hold cmd")
 	}
 	if cfg.Chunks < 3 {
 		return false, fmt.Errorf("lowest chunks required 3 but %d", cfg.Chunks)

@@ -8,7 +8,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,7 +85,7 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
-	for i := 0; ; i++ {
+	for {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
 			if stop {
@@ -121,7 +120,6 @@ func startWork(cfg *Config) {
 			break
 		}
 		time.Sleep(time.Second * 5)
-		fmt.Println(i)
 	}
 	log.Info("all task done")
 }

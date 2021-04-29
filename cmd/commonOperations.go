@@ -55,33 +55,12 @@ func getOneFreeDstComputer() (*Computer, error) {
 	for _, com := range dstComputersMapSingleton.CMap {
 		if com.CurrentThreads < com.LimitThread {
 			com.CurrentThreads++
-			srcComputersMapSingleton.CMap[com.Ip] = com
+			dstComputersMapSingleton.CMap[com.Ip] = com
 			return &com, nil
 		}
 	}
 	return nil, errors.New("no free dst computers for now")
 }
-
-//
-//func (c *Computer) occupySrcThread() {
-//	c.CurrentThreads++
-//	srcComputersMapSingleton.CMap[c.Ip] = *c
-//}
-
-//func (c *Computer) freeSrcThread() {
-//	c.CurrentThreads--
-//	dstComputersMapSingleton.CMap[c.Ip] = *c
-//}
-
-//func (c *Computer) occupyDstThread() {
-//	c.CurrentThreads++
-//	srcComputersMapSingleton.CMap[c.Ip] = *c
-//}
-
-//func (c *Computer) freeDstThread() {
-//	c.CurrentThreads--
-//	dstComputersMapSingleton.CMap[c.Ip] = *c
-//}
 
 func copyDir(srcDir, dst string, cfg *Config) error {
 	if err := mv_utils.MakeDirIfNotExists(dst); err != nil {
@@ -95,14 +74,14 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 			return err
 		}
 		if path != srcDir {
-			err = copy(path, dst+"/"+info.Name(), 0, cfg.Chunks)
+			err = copying(path, dst+"/"+info.Name(), 0, cfg.Chunks)
 		}
 		return err
 	})
 	return err
 }
 
-func copy(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
+func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 	statSrc, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -115,7 +94,7 @@ func copy(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 			now := time.Now()
 			if srcHash == dstHash && srcHash != "" && dstHash != "" {
 				if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-					log.Info("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+					log.Infof("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
 				}
 				return nil
 			}

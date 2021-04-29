@@ -81,7 +81,7 @@ func (t *UnSealedTask) releaseSrcComputer() {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
 	srcComputer.CurrentThreads--
-	dstComputersMapSingleton.CMap[t.srcIp] = srcComputer
+	srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
 }
 
 func (t *UnSealedTask) releaseDstComputer() {
@@ -101,8 +101,8 @@ func (t *UnSealedTask) setStatus(st string) {
 }
 
 func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	// copy unsealed
-	err := copy(t.unSealedSrc, t.unSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	// copying unsealed
+	err := copying(t.unSealedSrc, t.unSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
 		taskListSingleton.TLock.Lock()
 		t.setStatus(StatusOnWaiting)

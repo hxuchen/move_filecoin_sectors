@@ -47,7 +47,7 @@ func main() {
 	}
 	app := &cli.App{
 		Name:     "move-sectors",
-		Usage:    "copy sectors to another location",
+		Usage:    "copying sectors to another location",
 		Version:  build.GetVersion(),
 		Commands: cmd,
 		Flags:    nil,
@@ -61,7 +61,7 @@ func main() {
 
 var CpCmd = &cli.Command{
 	Name:  "run",
-	Usage: "startWork to copy files",
+	Usage: "startWork to copying files",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     "path",
@@ -72,7 +72,7 @@ var CpCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:     "UnSealed",
-			Usage:    "Declare whether to copy unsealed files only,default just copy cache and sealed",
+			Usage:    "Declare whether to copying unsealed files only,default just copying cache and sealed",
 			Required: false,
 			Hidden:   false,
 			Value:    false,
@@ -109,7 +109,7 @@ var CpCmd = &cli.Command{
 				stop = true
 			}
 		}()
-		log.Info("startWork to copy")
+		log.Info("startWork to copying")
 		startWork(config)
 		log.Info("mv_sectors exiting")
 		return nil
