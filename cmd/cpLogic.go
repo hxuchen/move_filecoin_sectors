@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,7 +86,9 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
-	log.Infof("%v", taskListSingleton.Ops)
+	for _, v := range taskListSingleton.Ops {
+		fmt.Println(interface{}(v).(CacheSealedTask))
+	}
 	for {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
