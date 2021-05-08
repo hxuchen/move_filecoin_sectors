@@ -1,28 +1,23 @@
-computers:
+srccomputers:
   - ip: 192.168.32.52
-    bindwidth: 1
+    paths:
+      - location: "/mnt/32cephtest"
+        currentthreads: 0
+    bandwidth: 1024 # MB/s
     limitthreads: 0
     currentthreads: 0
+dstcomputers:
   - ip: 192.168.99.250
-    bindwidth: 1
+    paths:
+      - location: "/mnt/datatest/dataa_nfs99250"
+        currentthreads: 0
+      - location: "/mnt/datatest/datab_nfs99250"
+        currentthreads: 0
+      - locaton: "/mnt/datatest/datac_nfs99250"
+        currentthreads: 0
+    bandwidth: 1024 # MB/s
     limitthreads: 0
     currentthreads: 0
-  - ip: 192.168.99.210
-    bindwidth: 1
-    limitthreads: 0
-    currentthreads: 0
-tasks:
-  - srcip: 192.168.32.52
-    src: /mnt/32cephtest/cache
-    dstip: 192.168.99.250
-    dst: /mnt/dataa/cache
-  - srcip: 192.168.32.52
-    src: /mnt/32cephtest
-    dstip: 192.168.99.250
-    dst: /mnt/dataa/
-  - srcip: 192.168.32.52
-    src: /mnt/32cephtest/sealed/
-    dstip: 192.168.99.250
-    dst: /mnt/dataa/sealed
 singlethreadmbps: 50 # MB/s
+singlepaththreadlimit: 3
 chunks: 10
