@@ -46,7 +46,7 @@ func (t *UnSealedTask) printInfo() {
 	fmt.Println(*t)
 }
 
-func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, int, error) {
+func (t *UnSealedTask) getBestDst() (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
 		return "", "", 0, err
@@ -61,7 +61,7 @@ func (t *UnSealedTask) getBestDst(singlePathThreadLimit int) (string, string, in
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
-		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
+		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
 			t.occupyDstPathThread(idx, dstC)
 			return p.Location, dstC.Ip, idx, nil
 		}

@@ -104,7 +104,7 @@ func startWork(cfg *Config) {
 				allDone = false
 				if t.canDo() {
 					// get one best dst
-					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
+					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
 						if err.Error() != move_common.NoDstSuitableForNow {
 							log.Warn(err)

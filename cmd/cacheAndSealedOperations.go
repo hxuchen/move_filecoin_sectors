@@ -62,7 +62,7 @@ func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealed
 	return task, nil
 }
 
-func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string, int, error) {
+func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
 		return "", "", 0, err
@@ -77,7 +77,7 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
-		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
+		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
 			t.occupyDstPathThread(idx, dstC)
 			return p.Location, dstC.Ip, idx, nil
 		}

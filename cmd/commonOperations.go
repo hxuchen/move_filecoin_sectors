@@ -41,7 +41,7 @@ type TaskList struct {
 type Operation interface {
 	printInfo()
 	canDo() bool
-	getBestDst(singlePathThreadLimit int) (string, string, int, error)
+	getBestDst() (string, string, int, error)
 	startCopy(cfg *Config, dstPathIdxInComp int)
 	releaseSrcComputer()
 	releaseDstComputer()
