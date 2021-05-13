@@ -57,7 +57,7 @@ nohup move_sectors run --path configPath >> ~/move_sectors.log &
    ```shell
    nohup move_sectors run --UnSealed >> ~/move_sectors.log &
    # 或者指定配置文件
-   nohup move_sectors run --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --UnSealed --path configPath >> ~/move_sectors.log &
    ```
    
    
