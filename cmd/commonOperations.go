@@ -23,6 +23,9 @@ const (
 	StatusOnWaiting = "StatusOnWaiting"
 	StatusOnWorking = "StatusOnWorking"
 	StatusDone      = "StatusDone"
+	ProofType32G    = "32G"
+	ProofType64G    = "64G"
+	TreeRFormat     = "sc-02-data-tree-r-last-%d.dat"
 )
 
 type ComputersMap struct {
@@ -47,6 +50,8 @@ type Operation interface {
 	fullInfo(dstOri, dstIp string)
 	occupyDstPathThread(idx int, c *Computer)
 	freeDstPathThread(idx int)
+	makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error)
+	checkIsCopied(cfg *Config) bool
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
