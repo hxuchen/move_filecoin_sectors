@@ -45,11 +45,11 @@ sudo make install
    配置完配置文件后使用如下命令启动程序：
 
    - 拷贝cache和sealed文件：
-   
+
    ```shell
    nohup move_sectors run >> ~/move_sectors.log &
    # 或者指定配置文件
-nohup move_sectors run --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --path configPath >> ~/move_sectors.log &
    ```
 
    - 拷贝unsealed文件
@@ -59,7 +59,7 @@ nohup move_sectors run --path configPath >> ~/move_sectors.log &
    # 或者指定配置文件
    nohup move_sectors run --UnSealed --path configPath >> ~/move_sectors.log &
    ```
+
    
-   
-   
+
    
