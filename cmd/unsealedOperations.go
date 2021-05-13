@@ -115,6 +115,7 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		log.Error(err)
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
+		os.Remove(t.UnSealedDst)
 		return
 	}
 	taskListSingleton.TLock.Lock()

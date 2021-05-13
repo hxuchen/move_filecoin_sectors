@@ -137,6 +137,7 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
+		os.RemoveAll(t.CacheDstDir)
 		return
 	}
 	// copying sealed
@@ -149,6 +150,7 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
+		os.Remove(t.SealedDst)
 		return
 	}
 	taskListSingleton.TLock.Lock()

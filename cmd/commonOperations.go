@@ -73,7 +73,7 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 	}
 	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if stop {
-			return nil
+			return errors.New("stop copy dir by syscall")
 		}
 		if info == nil || err != nil {
 			return err
