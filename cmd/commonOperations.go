@@ -23,6 +23,9 @@ const (
 	StatusOnWaiting = "StatusOnWaiting"
 	StatusOnWorking = "StatusOnWorking"
 	StatusDone      = "StatusDone"
+	ProofType32G    = "32G"
+	ProofType64G    = "64G"
+	TreeRFormat     = "sc-02-data-tree-r-last-%d.dat"
 )
 
 type ComputersMap struct {
@@ -38,7 +41,7 @@ type TaskList struct {
 type Operation interface {
 	printInfo()
 	canDo() bool
-	getBestDst(singlePathThreadLimit int) (string, string, int, error)
+	getBestDst() (string, string, int, error)
 	startCopy(cfg *Config, dstPathIdxInComp int)
 	releaseSrcComputer()
 	releaseDstComputer()
@@ -47,6 +50,8 @@ type Operation interface {
 	fullInfo(dstOri, dstIp string)
 	occupyDstPathThread(idx int, c *Computer)
 	freeDstPathThread(idx int)
+	makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error)
+	checkIsCopied(cfg *Config) bool
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
@@ -68,7 +73,7 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 	}
 	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if stop {
-			return nil
+			return errors.New("stop copy dir by syscall")
 		}
 		if info == nil || err != nil {
 			return err

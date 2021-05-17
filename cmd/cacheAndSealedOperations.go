@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"github.com/filecoin-project/go-state-types/big"
 	"move_sectors/move_common"
+	"move_sectors/mv_utils"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -19,15 +21,17 @@ import (
 )
 
 type CacheSealedTask struct {
-	srcIp       string
-	oriSrc      string
-	dstIp       string
-	cacheSrcDir string
-	sealedSrc   string
-	cacheDstDir string
-	sealedDst   string
-	totalSize   int64
-	status      string
+	SectorID      string
+	SrcIp         string
+	OriSrc        string
+	DstIp         string
+	CacheSrcDir   string
+	SealedSrc     string
+	CacheDstDir   string
+	SealedDst     string
+	TotalSize     int64
+	Status        string
+	SealProofType string
 }
 
 func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealedTask, error) {
@@ -48,16 +52,17 @@ func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealed
 	sealedSrcInfo, _ := os.Stat(sealedSrc)
 	totalSize += sealedSrcInfo.Size()
 
-	task.srcIp = srcIP
-	task.oriSrc = oriSrc
-	task.cacheSrcDir = cacheSrcDir
-	task.sealedSrc = sealedSrc
-	task.totalSize = totalSize
-	task.status = StatusOnWaiting
+	task.SectorID = sealedId
+	task.SrcIp = srcIP
+	task.OriSrc = oriSrc
+	task.CacheSrcDir = cacheSrcDir
+	task.SealedSrc = sealedSrc
+	task.TotalSize = totalSize
+	task.Status = StatusOnWaiting
 	return task, nil
 }
 
-func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string, int, error) {
+func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
 		return "", "", 0, err
@@ -72,7 +77,7 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 	for idx, p := range dstC.Paths {
 		var stat = new(syscall.Statfs_t)
 		_ = syscall.Statfs(p.Location, stat)
-		if stat.Bavail*uint64(stat.Bsize) > uint64(t.totalSize) && p.CurrentThreads < int64(singlePathThreadLimit) {
+		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
 			t.occupyDstPathThread(idx, dstC)
 			return p.Location, dstC.Ip, idx, nil
 		}
@@ -83,10 +88,10 @@ func (t *CacheSealedTask) getBestDst(singlePathThreadLimit int) (string, string,
 func (t *CacheSealedTask) canDo() bool {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
-	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
+	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
 		srcComputer.CurrentThreads++
-		srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
+		srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 		return true
 	}
 	return false
@@ -99,31 +104,31 @@ func (t *CacheSealedTask) printInfo() {
 func (t *CacheSealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
-	srcComputer := srcComputersMapSingleton.CMap[t.srcIp]
+	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
 	srcComputer.CurrentThreads--
-	srcComputersMapSingleton.CMap[t.srcIp] = srcComputer
+	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 }
 
 func (t *CacheSealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
-	dstComputer := dstComputersMapSingleton.CMap[t.dstIp]
+	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
 	dstComputer.CurrentThreads--
-	dstComputersMapSingleton.CMap[t.dstIp] = dstComputer
+	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
 }
 
 func (t *CacheSealedTask) getStatus() string {
-	return t.status
+	return t.Status
 }
 
 func (t *CacheSealedTask) setStatus(st string) {
-	t.status = st
+	t.Status = st
 }
 
 func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start tp copying %v", *t)
 	// copying cache
-	err := copyDir(t.cacheSrcDir, t.cacheDstDir, cfg)
+	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
 	if err != nil {
 		log.Error(err)
 		taskListSingleton.TLock.Lock()
@@ -132,10 +137,11 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
+		os.RemoveAll(t.CacheDstDir)
 		return
 	}
 	// copying sealed
-	err = copying(t.sealedSrc, t.sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	err = copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
 		taskListSingleton.TLock.Lock()
 		t.setStatus(StatusOnWaiting)
@@ -144,6 +150,7 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
+		os.Remove(t.SealedDst)
 		return
 	}
 	taskListSingleton.TLock.Lock()
@@ -156,9 +163,9 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 }
 
 func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {
-	t.cacheDstDir = strings.Replace(t.cacheSrcDir, t.oriSrc, dstOri, 1)
-	t.sealedDst = strings.Replace(t.sealedSrc, t.oriSrc, dstOri, 1)
-	t.dstIp = dstIp
+	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, dstOri, 1)
+	t.SealedDst = strings.Replace(t.SealedSrc, t.OriSrc, dstOri, 1)
+	t.DstIp = dstIp
 }
 
 func (t *CacheSealedTask) occupyDstPathThread(idx int, c *Computer) {
@@ -171,7 +178,77 @@ func (t *CacheSealedTask) occupyDstPathThread(idx int, c *Computer) {
 func (t *CacheSealedTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
-	dstComp := dstComputersMapSingleton.CMap[t.dstIp]
+	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
 	dstComp.Paths[idx].CurrentThreads--
-	dstComputersMapSingleton.CMap[t.dstIp] = dstComp
+	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
+}
+
+func (t *CacheSealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error) {
+	paths := make([]string, 0)
+	var TreeRNum int
+	switch t.SealProofType {
+	case ProofType32G:
+		TreeRNum = 8
+	case ProofType64G:
+		TreeRNum = 16
+	default:
+		return paths, errors.New(fmt.Sprintf("wrong file task SealProofType: %d", t.SealProofType))
+	}
+
+	var cacheDir string
+	var sealedPath string
+
+	if oriDst == "" {
+		cacheDir = t.CacheSrcDir
+		sealedPath = t.SealedSrc
+	} else {
+		cacheDir = strings.Replace(t.CacheSrcDir, t.OriSrc, oriDst, 1)
+		sealedPath = strings.Replace(t.SealedSrc, t.OriSrc, oriDst, 1)
+	}
+
+	paths = append(paths,
+		path.Join(cacheDir, "t_aux"),
+		path.Join(cacheDir, "p_aux"),
+	)
+	for i := 0; i < TreeRNum; i++ {
+		paths = append(paths, path.Join(cacheDir, fmt.Sprintf(TreeRFormat, i)))
+	}
+	paths = append(paths, sealedPath)
+	return paths, nil
+}
+
+func (t *CacheSealedTask) checkIsCopied(cfg *Config) bool {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+
+	for _, v := range dstComputersMapSingleton.CMap {
+		for _, p := range v.Paths {
+			filePaths, err := t.makeDstPathSliceForCheckIsCopied(p.Location)
+			if err != nil {
+				log.Error(err)
+			}
+			tag := 1
+			for _, singleFilePath := range filePaths {
+				src := strings.Replace(singleFilePath, p.Location, t.OriSrc, 1)
+				statSrc, _ := os.Stat(src)
+				statDst, err := os.Stat(singleFilePath)
+				// if existed,check hash
+				if err == nil {
+					if statDst.Size() == statSrc.Size() {
+						srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), cfg.Chunks)
+						dstHash, _ := mv_utils.CalFileHash(singleFilePath, statDst.Size(), cfg.Chunks)
+						if srcHash == dstHash && srcHash != "" && dstHash != "" {
+							tag = tag * 1
+						} else {
+							tag = tag * 0
+						}
+					}
+				}
+			}
+			if tag == 1 {
+				return true
+			}
+		}
+	}
+	return false
 }

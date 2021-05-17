@@ -2,6 +2,7 @@ srccomputers:
   - ip: 192.168.32.52
     paths:
       - location: "/mnt/32cephtest"
+        singlepaththreadlimit: 3
         currentthreads: 0
     bandwidth: 1024 # MB/s
     limitthreads: 0
@@ -10,14 +11,16 @@ dstcomputers:
   - ip: 192.168.99.250
     paths:
       - location: "/mnt/datatest/dataa_nfs99250"
+        singlepaththreadlimit: 3
         currentthreads: 0
       - location: "/mnt/datatest/datab_nfs99250"
+        singlepaththreadlimit: 3
         currentthreads: 0
       - locaton: "/mnt/datatest/datac_nfs99250"
+        singlepaththreadlimit: 3
         currentthreads: 0
     bandwidth: 1024 # MB/s
     limitthreads: 0
     currentthreads: 0
 singlethreadmbps: 50 # MB/s
-singlepaththreadlimit: 3
 chunks: 10

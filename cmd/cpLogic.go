@@ -16,7 +16,7 @@ import (
 )
 
 // init task list
-func initializeTaskList() error {
+func initializeTaskList(cfg *Config) error {
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		for _, src := range srcComputer.Paths {
 			if stop {
@@ -37,6 +37,9 @@ func initializeTaskList() error {
 					cacheSealedTask, err := newCacheSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
 					if err != nil {
 						return err
+					}
+					if cacheSealedTask.checkIsCopied(cfg) {
+						cacheSealedTask.setStatus(StatusDone)
 					}
 					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
 						log.Infof("task %v init done", cacheSealedTask)
@@ -59,9 +62,12 @@ func initializeTaskList() error {
 					if !info.Mode().IsRegular() {
 						return nil
 					}
-					unsealedTask, err := newUnSealedTask(path, src.Location, srcComputer.Ip)
+					unsealedTask, err := newUnSealedTask(path, src.Location, srcComputer.Ip, info.Name())
 					if err != nil {
 						return err
+					}
+					if unsealedTask.checkIsCopied(cfg) {
+						unsealedTask.setStatus(StatusDone)
 					}
 					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
 						log.Infof("task %v init done", unsealedTask)
@@ -81,7 +87,7 @@ func initializeTaskList() error {
 
 func startWork(cfg *Config) {
 	// init task list
-	err := initializeTaskList()
+	err := initializeTaskList(cfg)
 	if err != nil {
 		log.Error(err)
 		return
@@ -98,7 +104,7 @@ func startWork(cfg *Config) {
 				allDone = false
 				if t.canDo() {
 					// get one best dst
-					dst, dstIp, dstPathIdxInComp, err := t.getBestDst(cfg.SinglePathThreadLimit)
+					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
 						if err.Error() != move_common.NoDstSuitableForNow {
 							log.Warn(err)

@@ -16,11 +16,10 @@ import (
 )
 
 type Config struct {
-	SrcComputers          []Computer
-	DstComputers          []Computer
-	SingleThreadMBPS      int
-	SinglePathThreadLimit int
-	Chunks                int64
+	SrcComputers     []Computer
+	DstComputers     []Computer
+	SingleThreadMBPS int
+	Chunks           int64
 }
 
 type Computer struct {
@@ -32,8 +31,9 @@ type Computer struct {
 }
 
 type Path struct {
-	Location       string
-	CurrentThreads int64
+	Location              string
+	SinglePathThreadLimit int64
+	CurrentThreads        int64
 }
 
 func getConfig(cctx *cli.Context) (*Config, error) {
@@ -73,9 +73,6 @@ func isQualifiedConfig(cfg *Config) (bool, error) {
 	if cfg.DstComputers == nil {
 		return false, fmt.Errorf("dst computers is nil")
 	}
-	if cfg.SinglePathThreadLimit <= 0 {
-		return false, errors.New("invalid single path thread limit")
-	}
 	if err := initializeComputerMapSingleton(cfg); err != nil {
 		return false, err
 	}
@@ -98,6 +95,9 @@ func initializeComputerMapSingleton(cfg *Config) error {
 			srcComputersMapSingleton.CMap[v.Ip] = v
 			checkDoubled := make(map[string]struct{})
 			for _, path := range v.Paths {
+				if path.SinglePathThreadLimit <= 0 {
+					return errors.New("invalid single path thread limit")
+				}
 				if _, ok = checkDoubled[path.Location]; ok {
 					return fmt.Errorf("doubled path:%s in same ip:%s", path, v.Ip)
 				}
@@ -117,6 +117,9 @@ func initializeComputerMapSingleton(cfg *Config) error {
 			dstComputersMapSingleton.CMap[v.Ip] = v
 			checkDoubled := make(map[string]struct{})
 			for _, path := range v.Paths {
+				if path.SinglePathThreadLimit <= 0 {
+					return errors.New("invalid single path thread limit")
+				}
 				if _, ok = checkDoubled[path.Location]; ok {
 					return fmt.Errorf("doubled path:%s in same ip:%s", path, v.Ip)
 				}

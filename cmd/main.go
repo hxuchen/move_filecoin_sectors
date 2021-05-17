@@ -120,7 +120,7 @@ var CpCmd = &cli.Command{
 func createFileLock(confDir, lockFileName string) (io.Closer, error) {
 	locked, err := fslock.Locked(confDir, lockFileName)
 	if err != nil {
-		return nil, xerrors.Errorf("could not check lock status: %w", err)
+		return nil, xerrors.Errorf("could not check lock Status: %w", err)
 	}
 	if locked {
 		return nil, errors.New("program is already running")
