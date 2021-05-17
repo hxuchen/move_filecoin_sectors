@@ -250,6 +250,8 @@ func (t *CacheSealedTask) checkIsCopied(cfg *Config) bool {
 							tag = tag * 0
 						}
 					}
+				} else {
+					tag = tag * 0
 				}
 			}
 			if tag == 1 {
