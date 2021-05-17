@@ -38,6 +38,10 @@ func initializeTaskList(cfg *Config) error {
 					if err != nil {
 						return err
 					}
+					// do not cp zero size file
+					if cacheSealedTask == nil {
+						return nil
+					}
 					if cacheSealedTask.checkIsCopied(cfg) {
 						cacheSealedTask.setStatus(StatusDone)
 					}

@@ -56,7 +56,8 @@ func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealed
 	} else if sealedSrcInfo.Size() >= (68719476736-16<<10) && sealedSrcInfo.Size() <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		return task, fmt.Errorf("sealed file %s size not 32G or 64G,we can not deal it now", sealedSrc)
+		log.Errorf("sealed file %s size not 32G or 64G,we can not deal it now", sealedSrc)
+		return nil, nil
 	}
 	task.SectorID = sealedId
 	task.SrcIp = srcIP

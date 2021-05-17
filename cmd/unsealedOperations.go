@@ -42,7 +42,8 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask
 	} else if stat.Size() >= (68719476736-16<<10) && stat.Size() <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		return task, errors.New("task's sealed file size not 32G or 64G,we can not deal it now")
+		log.Errorf("sealed file %s size not 32G or 64G,we can not deal it now", unSealedSrc)
+		return nil, nil
 	}
 	task.TotalSize = stat.Size()
 	task.Status = StatusOnWaiting
