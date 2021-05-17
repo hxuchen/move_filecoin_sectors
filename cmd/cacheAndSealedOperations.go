@@ -51,7 +51,13 @@ func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealed
 	})
 	sealedSrcInfo, _ := os.Stat(sealedSrc)
 	totalSize += sealedSrcInfo.Size()
-
+	if sealedSrcInfo.Size() >= (34359738368-16<<10) && sealedSrcInfo.Size() <= (34359738368+16<<10) {
+		task.SealProofType = ProofType32G
+	} else if sealedSrcInfo.Size() >= (68719476736-16<<10) && sealedSrcInfo.Size() <= (68719476736+16<<10) {
+		task.SealProofType = ProofType64G
+	} else {
+		return task, errors.New("task's sealed file size not 32G or 64G,we can not deal it now")
+	}
 	task.SectorID = sealedId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
