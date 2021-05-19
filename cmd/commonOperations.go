@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"move_sectors/move_common"
 	"move_sectors/mv_utils"
 	"os"
 	"path"
@@ -74,7 +75,7 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 	}
 	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if stop {
-			return errors.New("stop copy dir by syscall")
+			return errors.New(move_common.StoppedBySyscall)
 		}
 		if info == nil || err != nil {
 			return err
@@ -147,7 +148,7 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 	readed := 0
 	for {
 		if stop {
-			return errors.New("stop by syscall")
+			return errors.New(move_common.StoppedBySyscall)
 		}
 
 		n, err := source.Read(buf)
