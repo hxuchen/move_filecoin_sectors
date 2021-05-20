@@ -117,13 +117,17 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
-		taskListSingleton.TLock.Lock()
-		t.setStatus(StatusOnWaiting)
-		taskListSingleton.TLock.Unlock()
-		log.Error(err)
+		if err.Error() == move_common.StoppedBySyscall {
+			log.Warn(err)
+		} else {
+			log.Error(err)
+		}
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		os.Remove(t.UnSealedDst)
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		return
 	}
 	taskListSingleton.TLock.Lock()

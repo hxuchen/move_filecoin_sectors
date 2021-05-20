@@ -4,4 +4,5 @@ const (
 	WrongDiskSize        = "WrongDiskSize"
 	SourceFileNotExisted = "SourceFileNotExisted"
 	NoDstSuitableForNow  = "NoDstSuitableForNow"
+	StoppedBySyscall     = "stopped by syscall"
 )

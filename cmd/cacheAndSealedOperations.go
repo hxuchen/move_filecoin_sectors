@@ -56,7 +56,7 @@ func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealed
 	} else if sealedSrcInfo.Size() >= (68719476736-16<<10) && sealedSrcInfo.Size() <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Errorf("sealed file %s size not 32G or 64G,we can not deal it now", sealedSrc)
+		log.Warnf("sealed file %s size not 32G or 64G,we can not deal it now", sealedSrc)
 		return nil, nil
 	}
 	task.SectorID = sealedId
@@ -137,27 +137,35 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	// copying cache
 	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
 	if err != nil {
-		log.Error(err)
-		taskListSingleton.TLock.Lock()
-		t.setStatus(StatusOnWaiting)
-		taskListSingleton.TLock.Unlock()
+		if err.Error() == move_common.StoppedBySyscall {
+			log.Warn(err)
+		} else {
+			log.Error(err)
+		}
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
 		os.RemoveAll(t.CacheDstDir)
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		return
 	}
 	// copying sealed
 	err = copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
-		taskListSingleton.TLock.Lock()
-		t.setStatus(StatusOnWaiting)
-		taskListSingleton.TLock.Unlock()
-		log.Error(err)
+		if err.Error() == move_common.StoppedBySyscall {
+			log.Warn(err)
+		} else {
+			log.Error(err)
+		}
 		t.releaseSrcComputer()
 		t.releaseDstComputer()
 		t.freeDstPathThread(dstPathIdxInComp)
 		os.Remove(t.SealedDst)
+		taskListSingleton.TLock.Lock()
+		t.setStatus(StatusOnWaiting)
+		taskListSingleton.TLock.Unlock()
 		return
 	}
 	taskListSingleton.TLock.Lock()

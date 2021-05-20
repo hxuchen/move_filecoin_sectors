@@ -26,7 +26,7 @@ func initializeTaskList(cfg *Config) error {
 				sealedSrcDir := strings.TrimRight(src.Location, "/") + "/sealed"
 				err := filepath.Walk(sealedSrcDir, func(path string, info os.FileInfo, err error) error {
 					if stop {
-						return errors.New("stopped by signal")
+						return errors.New(move_common.StoppedBySyscall)
 					}
 					if info == nil || err != nil {
 						return err
@@ -58,7 +58,7 @@ func initializeTaskList(cfg *Config) error {
 				unsealedSrcDir := strings.TrimRight(src.Location, "/") + "/unsealed"
 				err := filepath.Walk(unsealedSrcDir, func(path string, info os.FileInfo, err error) error {
 					if stop {
-						return errors.New("stopped by signal")
+						return errors.New(move_common.StoppedBySyscall)
 					}
 					if info == nil || err != nil {
 						return err
@@ -85,13 +85,14 @@ func initializeTaskList(cfg *Config) error {
 			}
 		}
 	}
-	log.Info("tasks init done")
 	return nil
 }
 
 func startWork(cfg *Config) {
 	// init task list
+	log.Info("start to init tasks")
 	err := initializeTaskList(cfg)
+	log.Info("tasks init done")
 	if err != nil {
 		log.Error(err)
 		return
@@ -100,7 +101,8 @@ func startWork(cfg *Config) {
 		allDone := true
 		for _, t := range taskListSingleton.Ops {
 			if stop {
-				log.Warn("task stopped by signal")
+				log.Warn(move_common.StoppedBySyscall)
+				waitingForAllTaskStop()
 				return
 			}
 			switch t.getStatus() {
@@ -139,4 +141,21 @@ func startWork(cfg *Config) {
 		time.Sleep(time.Second * 5)
 	}
 	log.Info("all task done")
+}
+
+func waitingForAllTaskStop() {
+	log.Info("waiting all tasks stop to exit process")
+	allStop := true
+	for {
+		for _, t := range taskListSingleton.Ops {
+			if t.getStatus() == StatusOnWorking {
+				allStop = false
+			}
+		}
+		if allStop {
+			log.Info("all tasks stopped")
+			break
+		}
+		time.Sleep(time.Second)
+	}
 }
