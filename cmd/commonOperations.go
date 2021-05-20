@@ -108,7 +108,7 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 		}
 	}
 
-	const BufferSize = 1 * 1024 * 1024
+	const BufferSize = 16 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 
 	sourceFileStat, err := os.Stat(src)
