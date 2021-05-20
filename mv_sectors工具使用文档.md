@@ -60,6 +60,12 @@ sudo make install
    nohup move_sectors run --UnSealed --path configPath >> ~/move_sectors.log &
    ```
 
-   
+   - 使用以下环境变量可以打印详细日志
 
+   ```shell
+   export SHOW_LOG_DETAIL=1
+   ```
+   
+   
+   
    
