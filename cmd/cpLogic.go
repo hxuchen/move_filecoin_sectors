@@ -35,6 +35,12 @@ func initializeTaskList(cfg *Config) error {
 						return nil
 					}
 					cacheSealedTask, err := newCacheSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
+
+					// TODO: deal cache file not exists error
+					if err != nil && strings.Contains(err.Error(), move_common.SourceFileNotExisted) {
+						return nil
+					}
+
 					if err != nil {
 						return err
 					}
