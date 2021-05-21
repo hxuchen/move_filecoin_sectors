@@ -160,26 +160,28 @@ func initializeTaskList(cfg *Config) error {
 				}
 			}
 
-			// checkSourceSize
-			srcPaths, err := op.checkSourceSize()
-			if err != nil {
-				if skipSourceError {
-					continue
-				} else {
-					return err
+			if op != nil {
+				// checkSourceSize
+				srcPaths, err := op.checkSourceSize()
+				if err != nil {
+					if skipSourceError {
+						continue
+					} else {
+						return err
+					}
 				}
-			}
 
-			// check is already existed in dst
-			if op.checkIsExistedInDst(srcPaths, cfg) {
-				continue
-			}
+				// check is already existed in dst
+				if op.checkIsExistedInDst(srcPaths, cfg) {
+					continue
+				}
 
-			// add op
-			taskListSingleton.Ops = append(taskListSingleton.Ops, op)
+				// add op
+				taskListSingleton.Ops = append(taskListSingleton.Ops, op)
 
-			if showLogDetail {
-				log.Infof("task %v init done", op.getInfo())
+				if showLogDetail {
+					log.Infof("task %v init done", op.getInfo())
+				}
 			}
 		}
 	}
