@@ -125,7 +125,7 @@ func (t *UnSealedTask) setStatus(st string) {
 }
 
 func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	log.Infof("start tp copying %v", *t)
+	log.Infof("start to copying %v", *t)
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {

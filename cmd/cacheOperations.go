@@ -140,7 +140,7 @@ func (t *CacheTask) setStatus(st string) {
 }
 
 func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	log.Infof("start tp copying %v", *t)
+	log.Infof("start to copying %v", *t)
 	// copying cache
 	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
 	if err != nil {

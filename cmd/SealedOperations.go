@@ -137,7 +137,7 @@ func (t *SealedTask) setStatus(st string) {
 }
 
 func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	log.Infof("start tp copying %v", *t)
+	log.Infof("start to copying %v", *t)
 	// copying sealed
 	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
