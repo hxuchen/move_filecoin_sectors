@@ -38,6 +38,9 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 	// cal total cache size
 	var totalSize int64
 	_ = filepath.Walk(singleCacheSrcDir, func(path string, info os.FileInfo, err error) error {
+		if path == singleCacheSrcDir {
+			return nil
+		}
 		if info != nil {
 			totalSize += info.Size()
 		}
