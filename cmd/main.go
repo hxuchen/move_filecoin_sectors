@@ -29,7 +29,6 @@ var (
 	stop              = false
 	skipSourceError   = false
 	fileType          move_common.FileType
-	showLogDetail     = false
 	taskListSingleton = TaskList{
 		Ops:   make([]Operation, 0),
 		TLock: new(sync.Mutex),
@@ -115,10 +114,6 @@ var CpCmd = &cli.Command{
 			defer lock.Close()
 		} else {
 			return errors.New("create file lock failed")
-		}
-
-		if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-			showLogDetail = true
 		}
 
 		// which kind file will be moved

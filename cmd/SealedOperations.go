@@ -221,11 +221,9 @@ func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 				}
 			}
 			if tag == 1 {
-				if showLogDetail {
-					log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
-						*t, p.Location, time.Now().Sub(sinceTime))
-					log.Debugf("task %v is existed in dst", *t)
-				}
+				log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
+					*t, p.Location, time.Now().Sub(sinceTime))
+				log.Debugf("task %v is existed in dst", *t)
 				return true
 			}
 		}
@@ -246,9 +244,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
 				if cmp.CurrentThreads < cmp.LimitThread {
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					if showLogDetail {
-						log.Debugf("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
-					}
+					log.Debugf("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
@@ -264,9 +260,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
 				if cmp.CurrentThreads < cmp.LimitThread {
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					if showLogDetail {
-						log.Infof("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
-					}
+					log.Infof("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}

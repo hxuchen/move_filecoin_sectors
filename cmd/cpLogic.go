@@ -162,9 +162,7 @@ func initializeTaskList(cfg *Config) error {
 
 			if op != nil {
 				// checkSourceSize
-				if showLogDetail {
-					log.Debugf("check source size of %v", op.getInfo())
-				}
+				log.Debugf("check source size of %v", op.getInfo())
 				srcPaths, err := op.checkSourceSize()
 				if err != nil {
 					if skipSourceError {
@@ -175,9 +173,7 @@ func initializeTaskList(cfg *Config) error {
 				}
 
 				// check is already existed in dst
-				if showLogDetail {
-					log.Debugf("check file is already existed", op.getInfo())
-				}
+				log.Debugf("check file is already existed", op.getInfo())
 				if op.checkIsExistedInDst(srcPaths, cfg) {
 					continue
 				}
@@ -185,9 +181,7 @@ func initializeTaskList(cfg *Config) error {
 				// add op
 				taskListSingleton.Ops = append(taskListSingleton.Ops, op)
 
-				if showLogDetail {
-					log.Debugf("task %v init done", op.getInfo())
-				}
+				log.Debugf("task %v init done", op.getInfo())
 			}
 		}
 	}
@@ -215,7 +209,9 @@ func startWork(cfg *Config) {
 				allDone = false
 				if t.canDo() {
 					// get one best dst
+					log.Debugf("start to get best dst fot %v", t.getInfo())
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
+					log.Debugf("get best dst done for %v", t.getInfo())
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
 							continue
