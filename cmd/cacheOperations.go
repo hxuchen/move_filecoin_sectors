@@ -235,7 +235,7 @@ func (t *CacheTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 				}
 			}
 			if tag == 1 {
-				log.Debugf("src cache file: %v already existed in dst %s,SealedTask done,check cost %v",
+				log.Debugf("src cache file: %v already existed in dst %s,cacheTask done,check cost %v",
 					*t, p.Location, time.Now().Sub(sinceTime))
 				log.Debugf("task %v is existed in dst", *t)
 				return true

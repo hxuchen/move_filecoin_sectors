@@ -210,7 +210,7 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 				}
 			}
 			if tag == 1 {
-				log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
+				log.Debugf("src unsealed file: %v already existed in dst %s,unSealedTask done,check cost %v",
 					*t, p.Location, time.Now().Sub(sinceTime))
 				log.Debugf("task %v is existed in dst", *t)
 				return true

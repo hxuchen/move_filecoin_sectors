@@ -68,11 +68,13 @@ func initializeComputerMapSingleton(cfg *Config) error {
 func initializeTaskList(cfg *Config) error {
 	log.Info("start to init tasks")
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
+		log.Debugf("%v", srcComputersMapSingleton.CMap)
 		for _, src := range srcComputer.Paths {
+			log.Debugf("dealing %s %s", srcComputer.Ip, src)
 			if stop {
 				return errors.New("stopped by signal")
 			}
-			var op Operation
+			var ops = make([]Operation, 0)
 			switch fileType {
 			case move_common.Cache:
 				cacheSrcDir := strings.TrimRight(src.Location, "/") + "/cache"
@@ -95,7 +97,7 @@ func initializeTaskList(cfg *Config) error {
 							return nil
 						}
 
-						op = cacheTask
+						ops = append(ops, cacheTask)
 					}
 					return err
 				})
@@ -122,7 +124,7 @@ func initializeTaskList(cfg *Config) error {
 					if sealedTask == nil {
 						return nil
 					}
-					op = sealedTask
+					ops = append(ops, sealedTask)
 
 					return err
 				})
@@ -151,7 +153,7 @@ func initializeTaskList(cfg *Config) error {
 						return nil
 					}
 
-					op = unsealedTask
+					ops = append(ops, unsealedTask)
 
 					return err
 				})
@@ -160,28 +162,31 @@ func initializeTaskList(cfg *Config) error {
 				}
 			}
 
-			if op != nil {
-				// checkSourceSize
-				log.Debugf("check source size of %v", op.getInfo())
-				srcPaths, err := op.checkSourceSize()
-				if err != nil {
-					if skipSourceError {
-						continue
-					} else {
-						return err
+			if len(ops) > 0 {
+				for _, op := range ops {
+					// checkSourceSize
+					log.Debugf("check source size of %v", op.getInfo())
+					srcPaths, err := op.checkSourceSize()
+					if err != nil {
+						if skipSourceError {
+							continue
+						} else {
+							return err
+						}
 					}
+
+					// check is already existed in dst
+					log.Debugf("check file is already existed", op.getInfo())
+					if op.checkIsExistedInDst(srcPaths, cfg) {
+						log.Debugf("")
+						continue
+					}
+
+					// add op
+					taskListSingleton.Ops = append(taskListSingleton.Ops, op)
+
+					log.Debugf("task %v init done", op.getInfo())
 				}
-
-				// check is already existed in dst
-				log.Debugf("check file is already existed", op.getInfo())
-				if op.checkIsExistedInDst(srcPaths, cfg) {
-					continue
-				}
-
-				// add op
-				taskListSingleton.Ops = append(taskListSingleton.Ops, op)
-
-				log.Debugf("task %v init done", op.getInfo())
 			}
 		}
 	}
