@@ -73,7 +73,7 @@ sudo make install
    - 使用以下环境变量可以打印详细日志
    
    ```shell
-   export SHOW_LOG_DETAIL=1
+   export GOLOG_LOG_LEVEL=DEBUG
    ```
    
    - 如果要跳过大小不对的文件，让程序继续运行

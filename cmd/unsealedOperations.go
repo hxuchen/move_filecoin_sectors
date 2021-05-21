@@ -32,19 +32,20 @@ type UnSealedTask struct {
 
 func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask, error) {
 	var task = new(UnSealedTask)
-	task.SectorID = sectorID
-	task.SrcIp = srcIP
-	task.OriSrc = oriSrc
-	task.UnSealedSrc = unSealedSrc
 	stat, _ := os.Stat(unSealedSrc)
 	if stat.Size() >= (34359738368-16<<10) && stat.Size() <= (34359738368+16<<10) {
 		task.SealProofType = ProofType32G
 	} else if stat.Size() >= (68719476736-16<<10) && stat.Size() <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Errorf("sealed file %s size not 32G or 64G,we can not deal it now", unSealedSrc)
+		log.Warnf("sealed file %s size not 32G or 64G,we can not deal it now", unSealedSrc)
 		return nil, nil
 	}
+
+	task.SectorID = sectorID
+	task.SrcIp = srcIP
+	task.OriSrc = oriSrc
+	task.UnSealedSrc = unSealedSrc
 	task.TotalSize = stat.Size()
 	task.Status = StatusOnWaiting
 	return task, nil
@@ -154,8 +155,6 @@ func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
 }
 
 func (t *UnSealedTask) occupyDstPathThread(idx int, c *Computer) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
 }
@@ -222,9 +221,7 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 }
 
 func (t *UnSealedTask) tryToFindGroupDir() (string, string, int, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-
+	log.Debugf("trying to find group dir for %s unsealed", t.SectorID)
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for idx, p := range cmp.Paths {

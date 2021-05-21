@@ -57,6 +57,11 @@ func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, erro
 }
 
 func (t *SealedTask) getBestDst() (string, string, int, error) {
+	log.Debugf("finding best dst, %s", t.SectorID)
+
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+
 	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
@@ -69,12 +74,13 @@ func (t *SealedTask) getBestDst() (string, string, int, error) {
 			return "", "", 0, err
 		}
 
+		log.Debugf("sorting dst paths")
 		sort.Slice(dstC.Paths, func(i, j int) bool {
 			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
 			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 			return iw.GreaterThanEqual(jw)
 		})
-
+		log.Debugf("selecting dst paths for %s", t.SectorID)
 		for idx, p := range dstC.Paths {
 			var stat = new(syscall.Statfs_t)
 			_ = syscall.Statfs(p.Location, stat)
@@ -83,6 +89,7 @@ func (t *SealedTask) getBestDst() (string, string, int, error) {
 				return p.Location, dstC.Ip, idx, nil
 			}
 		}
+		log.Debugf("found group path for %s sealed", t.SectorID)
 		return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 	}
 
@@ -164,8 +171,6 @@ func (t *SealedTask) fullInfo(dstOri, dstIp string) {
 }
 
 func (t *SealedTask) occupyDstPathThread(idx int, c *Computer) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
 }
@@ -232,9 +237,7 @@ func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 }
 
 func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-
+	log.Debugf("trying to find group dir for %s sealed", t.SectorID)
 	// search cache at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for idx, p := range cmp.Paths {

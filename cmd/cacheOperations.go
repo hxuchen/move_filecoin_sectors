@@ -63,8 +63,10 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 
 func (t *CacheTask) getBestDst() (string, string, int, error) {
 	log.Debugf("finding best dst, %s", t.SectorID)
+
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
+
 	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
@@ -75,6 +77,7 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 		if err != nil {
 			return "", "", 0, err
 		}
+
 		log.Debugf("sorting dst paths")
 		sort.Slice(dstC.Paths, func(i, j int) bool {
 			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
