@@ -89,24 +89,24 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 }
 
 func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
-	statSrc, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	statDst, err := os.Stat(dst)
-	if err == nil {
-		if statDst.Size() == statSrc.Size() {
-			srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), chunks)
-			dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
-			now := time.Now()
-			if srcHash == dstHash && srcHash != "" && dstHash != "" {
-				if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-					log.Infof("src file: %s already existed in dst %s,SealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
-				}
-				return nil
-			}
-		}
-	}
+	//statSrc, err := os.Stat(src)
+	//if err != nil {
+	//	return err
+	//}
+	//statDst, err := os.Stat(dst)
+	//if err == nil {
+	//	if statDst.Size() == statSrc.Size() {
+	//		srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), chunks)
+	//		dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
+	//		now := time.Now()
+	//		if srcHash == dstHash && srcHash != "" && dstHash != "" {
+	//			if os.Getenv("SHOW_LOG_DETAIL") == "1" {
+	//				log.Infof("src file: %s already existed in dst %s,SealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+	//			}
+	//			return nil
+	//		}
+	//	}
+	//}
 
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)

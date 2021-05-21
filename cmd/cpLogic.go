@@ -12,6 +12,7 @@ import (
 	"move_sectors/move_common"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -162,8 +163,11 @@ func initializeTaskList(cfg *Config) error {
 				}
 			}
 
-			if len(ops) > 0 {
-				for _, op := range ops {
+			if lenOps := len(ops); lenOps > 0 {
+				var threadChan = make(chan struct{}, runtime.NumCPU())
+				var lastOpDone = make(chan struct{}, 1)
+				for idx, op := range ops {
+
 					// checkSourceSize
 					log.Debugf("check source size of %v", op.getInfo())
 					srcPaths, err := op.checkSourceSize()
@@ -175,17 +179,32 @@ func initializeTaskList(cfg *Config) error {
 						}
 					}
 
-					// check is already existed in dst
-					log.Debugf("check file is already existed", op.getInfo())
-					if op.checkIsExistedInDst(srcPaths, cfg) {
-						log.Debugf("")
-						continue
+					select {
+					case threadChan <- struct{}{}:
+						go func() {
+							defer func() {
+								<-threadChan
+							}()
+							// check is already existed in dst
+							log.Debugf("check file is already existed", op.getInfo())
+							if op.checkIsExistedInDst(srcPaths, cfg) {
+								return
+							}
+
+							// add op
+							taskListSingleton.TLock.Lock()
+							taskListSingleton.Ops = append(taskListSingleton.Ops, op)
+							taskListSingleton.TLock.Unlock()
+
+							log.Debugf("task %v init done", op.getInfo())
+							if idx == lenOps-1 {
+								lastOpDone <- struct{}{}
+							}
+						}()
 					}
-
-					// add op
-					taskListSingleton.Ops = append(taskListSingleton.Ops, op)
-
-					log.Debugf("task %v init done", op.getInfo())
+				}
+				select {
+				case <-lastOpDone:
 				}
 			}
 		}
