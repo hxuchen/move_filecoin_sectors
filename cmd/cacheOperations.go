@@ -72,20 +72,18 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 		}
 		dstComputersMapSingleton.CLock.Lock()
 		defer dstComputersMapSingleton.CLock.Unlock()
-		if showLogDetail {
-			log.Debugf("finding best dst, %s", t.SectorID)
-		}
+		log.Debugf("finding best dst, %s", t.SectorID)
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
 		}
-
+		log.Debugf("sorting dst paths")
 		sort.Slice(dstC.Paths, func(i, j int) bool {
 			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
 			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 			return iw.GreaterThanEqual(jw)
 		})
-
+		log.Debugf("selecting dst paths")
 		for idx, p := range dstC.Paths {
 			var stat = new(syscall.Statfs_t)
 			_ = syscall.Statfs(p.Location, stat)

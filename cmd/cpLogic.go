@@ -220,9 +220,7 @@ func startWork(cfg *Config) {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
 							continue
 						} else if err.Error() == move_common.NoDstSuitableForNow {
-							if showLogDetail {
-								log.Debug(err.Error())
-							}
+							log.Debug(err.Error())
 						} else {
 							log.Warn(err)
 						}
