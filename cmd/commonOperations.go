@@ -101,7 +101,7 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 			now := time.Now()
 			if srcHash == dstHash && srcHash != "" && dstHash != "" {
 				if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-					log.Infof("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
+					log.Infof("src file: %s already existed in dst %s,SealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
 				}
 				return nil
 			}

@@ -8,12 +8,61 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"move_sectors/move_common"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+func initializeComputerMapSingleton(cfg *Config) error {
+	for _, v := range cfg.SrcComputers {
+		if v.Ip == "" || v.BandWidth == 0 || len(v.Paths) == 0 {
+			return errors.New("invalid computer ip, BandWidth or paths; please check the config")
+		}
+		if _, ok := srcComputersMapSingleton.CMap[v.Ip]; !ok {
+			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
+			srcComputersMapSingleton.CMap[v.Ip] = v
+			checkDoubled := make(map[string]struct{})
+			for _, path := range v.Paths {
+				if path.SinglePathThreadLimit <= 0 {
+					return errors.New("invalid single path thread limit")
+				}
+				if _, ok = checkDoubled[path.Location]; ok {
+					return fmt.Errorf("doubled path:%s in same ip:%s", path.Location, v.Ip)
+				}
+				checkDoubled[path.Location] = struct{}{}
+			}
+		} else {
+			return errors.New("double computer ip,please check the config")
+		}
+	}
+
+	for _, v := range cfg.DstComputers {
+		if v.Ip == "" || v.BandWidth == 0 || len(v.Paths) == 0 {
+			return errors.New("invalid computer ip, BandWidth or paths; please check the config")
+		}
+		if _, ok := dstComputersMapSingleton.CMap[v.Ip]; !ok {
+			v.LimitThread = calThreadLimit(v.BandWidth, cfg.SingleThreadMBPS)
+			dstComputersMapSingleton.CMap[v.Ip] = v
+			checkDoubled := make(map[string]struct{})
+			for _, path := range v.Paths {
+				if path.SinglePathThreadLimit <= 0 {
+					return errors.New("invalid single path thread limit")
+				}
+				if _, ok = checkDoubled[path.Location]; ok {
+					return fmt.Errorf("doubled path:%s in same ip:%s", path.Location, v.Ip)
+				}
+				checkDoubled[path.Location] = struct{}{}
+			}
+		} else {
+			return errors.New("double computer ip,please check the config")
+		}
+	}
+
+	return nil
+}
 
 // init task list
 func initializeTaskList(cfg *Config) error {
@@ -22,7 +71,41 @@ func initializeTaskList(cfg *Config) error {
 			if stop {
 				return errors.New("stopped by signal")
 			}
-			if !doUnSealed {
+			switch fileType {
+			case move_common.Cache:
+				cacheSrcDir := strings.TrimRight(src.Location, "/") + "/cache"
+				err := filepath.Walk(cacheSrcDir, func(path string, info os.FileInfo, err error) error {
+					if stop {
+						return errors.New(move_common.StoppedBySyscall)
+					}
+					if info == nil || err != nil {
+						return err
+					}
+					if info.Mode().IsDir() {
+						// get initialized cacheTask
+						singleCacheSrcDir := cacheSrcDir + "/" + info.Name()
+						cacheTask, err := newCacheTask(singleCacheSrcDir, info.Name(), src.Location, srcComputer.Ip)
+						if err != nil {
+							return err
+						}
+						// do not cp file which isn't 32G or 64G,or which size error
+						if cacheTask == nil {
+							return nil
+						}
+
+						if os.Getenv("SHOW_LOG_DETAIL") == "1" {
+							log.Infof("task %v init done", cacheTask)
+						}
+
+						// add op
+						taskListSingleton.Ops = append(taskListSingleton.Ops, cacheTask)
+					}
+					return err
+				})
+				if err != nil {
+					return err
+				}
+			case move_common.Sealed:
 				sealedSrcDir := strings.TrimRight(src.Location, "/") + "/sealed"
 				err := filepath.Walk(sealedSrcDir, func(path string, info os.FileInfo, err error) error {
 					if stop {
@@ -34,11 +117,11 @@ func initializeTaskList(cfg *Config) error {
 					if !info.Mode().IsRegular() {
 						return nil
 					}
-					cacheSealedTask, err := newCacheSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
+					cacheSealedTask, err := newSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
 					if err != nil {
 						return err
 					}
-					// do not cp zero size file
+					// do not cp file which isn't 32G or 64G,or which size error
 					if cacheSealedTask == nil {
 						return nil
 					}
@@ -54,7 +137,7 @@ func initializeTaskList(cfg *Config) error {
 				if err != nil {
 					return err
 				}
-			} else {
+			case move_common.UnSealed:
 				unsealedSrcDir := strings.TrimRight(src.Location, "/") + "/unsealed"
 				err := filepath.Walk(unsealedSrcDir, func(path string, info os.FileInfo, err error) error {
 					if stop {

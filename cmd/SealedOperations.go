@@ -14,19 +14,17 @@ import (
 	"move_sectors/mv_utils"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
 )
 
-type CacheSealedTask struct {
+type SealedTask struct {
 	SectorID      string
 	SrcIp         string
 	OriSrc        string
-	DstIp         string
-	CacheSrcDir   string
 	SealedSrc     string
+	DstIp         string
 	CacheDstDir   string
 	SealedDst     string
 	TotalSize     int64
@@ -34,42 +32,32 @@ type CacheSealedTask struct {
 	SealProofType string
 }
 
-func newCacheSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*CacheSealedTask, error) {
-	var task = new(CacheSealedTask)
+func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, error) {
+	var task = new(SealedTask)
 	oriSrc = strings.TrimRight(oriSrc, "/")
-	cacheSrcDir := oriSrc + "/" + "cache" + "/" + sealedId
 
-	cacheSrcDir = checkAndFindCacheSrc(cacheSrcDir, oriSrc)
-	if cacheSrcDir == "" {
-		return task, fmt.Errorf("%s: %s", move_common.SourceFileNotExisted, cacheSrcDir)
-	}
-
-	var totalSize int64
-	_ = filepath.Walk(cacheSrcDir, func(path string, info os.FileInfo, err error) error {
-		totalSize += info.Size()
-		return nil
-	})
+	// check sealed file size is valid or not
 	sealedSrcInfo, _ := os.Stat(sealedSrc)
-	totalSize += sealedSrcInfo.Size()
-	if sealedSrcInfo.Size() >= (34359738368-16<<10) && sealedSrcInfo.Size() <= (34359738368+16<<10) {
+	totalSize := sealedSrcInfo.Size()
+	if totalSize >= (34359738368-16<<10) && totalSize <= (34359738368+16<<10) {
 		task.SealProofType = ProofType32G
-	} else if sealedSrcInfo.Size() >= (68719476736-16<<10) && sealedSrcInfo.Size() <= (68719476736+16<<10) {
+	} else if totalSize >= (68719476736-16<<10) && totalSize <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Warnf("sealed file %s size not 32G or 64G,we can not deal it now", sealedSrc)
+		log.Warnf("sector file sealed size of %s is not 32G or 64G,we can not deal it now", sealedId)
 		return nil, nil
 	}
+
 	task.SectorID = sealedId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
-	task.CacheSrcDir = cacheSrcDir
 	task.SealedSrc = sealedSrc
 	task.TotalSize = totalSize
 	task.Status = StatusOnWaiting
 	return task, nil
 }
 
-func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
+func (t *SealedTask) getBestDst() (string, string, int, error) {
 	dstC, err := getOneFreeDstComputer()
 	if err != nil {
 		return "", "", 0, err
@@ -92,7 +80,7 @@ func (t *CacheSealedTask) getBestDst() (string, string, int, error) {
 	return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 }
 
-func (t *CacheSealedTask) canDo() bool {
+func (t *SealedTask) canDo() bool {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
@@ -104,11 +92,11 @@ func (t *CacheSealedTask) canDo() bool {
 	return false
 }
 
-func (t *CacheSealedTask) printInfo() {
+func (t *SealedTask) printInfo() {
 	fmt.Println(*t)
 }
 
-func (t *CacheSealedTask) releaseSrcComputer() {
+func (t *SealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
@@ -116,7 +104,7 @@ func (t *CacheSealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 }
 
-func (t *CacheSealedTask) releaseDstComputer() {
+func (t *SealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
@@ -124,35 +112,35 @@ func (t *CacheSealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
 }
 
-func (t *CacheSealedTask) getStatus() string {
+func (t *SealedTask) getStatus() string {
 	return t.Status
 }
 
-func (t *CacheSealedTask) setStatus(st string) {
+func (t *SealedTask) setStatus(st string) {
 	t.Status = st
 }
 
-func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
+func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start tp copying %v", *t)
 	// copying cache
-	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
-	if err != nil {
-		if err.Error() == move_common.StoppedBySyscall {
-			log.Warn(err)
-		} else {
-			log.Error(err)
-		}
-		t.releaseSrcComputer()
-		t.releaseDstComputer()
-		t.freeDstPathThread(dstPathIdxInComp)
-		os.RemoveAll(t.CacheDstDir)
-		taskListSingleton.TLock.Lock()
-		t.setStatus(StatusOnWaiting)
-		taskListSingleton.TLock.Unlock()
-		return
-	}
+	//err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
+	//if err != nil {
+	//	if err.Error() == move_common.StoppedBySyscall {
+	//		log.Warn(err)
+	//	} else {
+	//		log.Error(err)
+	//	}
+	//	t.releaseSrcComputer()
+	//	t.releaseDstComputer()
+	//	t.freeDstPathThread(dstPathIdxInComp)
+	//	os.RemoveAll(t.CacheDstDir)
+	//	taskListSingleton.TLock.Lock()
+	//	t.setStatus(StatusOnWaiting)
+	//	taskListSingleton.TLock.Unlock()
+	//	return
+	//}
 	// copying sealed
-	err = copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -177,20 +165,20 @@ func (t *CacheSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("task %v done", *t)
 }
 
-func (t *CacheSealedTask) fullInfo(dstOri, dstIp string) {
-	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, dstOri, 1)
+func (t *SealedTask) fullInfo(dstOri, dstIp string) {
+	//t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, dstOri, 1)
 	t.SealedDst = strings.Replace(t.SealedSrc, t.OriSrc, dstOri, 1)
 	t.DstIp = dstIp
 }
 
-func (t *CacheSealedTask) occupyDstPathThread(idx int, c *Computer) {
+func (t *SealedTask) occupyDstPathThread(idx int, c *Computer) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
 }
 
-func (t *CacheSealedTask) freeDstPathThread(idx int) {
+func (t *SealedTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
@@ -198,7 +186,7 @@ func (t *CacheSealedTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
 }
 
-func (t *CacheSealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error) {
+func (t *SealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error) {
 	paths := make([]string, 0)
 	var TreeRNum int
 	switch t.SealProofType {
@@ -214,10 +202,10 @@ func (t *CacheSealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]str
 	var sealedPath string
 
 	if oriDst == "" {
-		cacheDir = t.CacheSrcDir
+		//cacheDir = t.CacheSrcDir
 		sealedPath = t.SealedSrc
 	} else {
-		cacheDir = strings.Replace(t.CacheSrcDir, t.OriSrc, oriDst, 1)
+		//cacheDir = strings.Replace(t.CacheSrcDir, t.OriSrc, oriDst, 1)
 		sealedPath = strings.Replace(t.SealedSrc, t.OriSrc, oriDst, 1)
 	}
 
@@ -232,7 +220,7 @@ func (t *CacheSealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]str
 	return paths, nil
 }
 
-func (t *CacheSealedTask) checkIsCopied(cfg *Config) bool {
+func (t *SealedTask) checkIsCopied(cfg *Config) bool {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 
