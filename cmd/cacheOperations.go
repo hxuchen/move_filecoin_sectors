@@ -62,14 +62,12 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 }
 
 func (t *CacheTask) getBestDst() (string, string, int, error) {
-	log.Debugf("finding group dst, %s", t.SectorID)
 	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
-		dstComputersMapSingleton.CLock.Lock()
-		defer dstComputersMapSingleton.CLock.Unlock()
+
 		log.Debugf("finding best dst, %s", t.SectorID)
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
@@ -279,7 +277,7 @@ func (t *CacheTask) checkSourceSize() ([]string, error) {
 func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
-
+	log.Debugf("finding group dst, %s", t.SectorID)
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for idx, p := range cmp.Paths {
