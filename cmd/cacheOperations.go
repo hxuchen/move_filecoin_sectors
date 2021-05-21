@@ -119,7 +119,9 @@ func (t *CacheTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
-	srcComputer.CurrentThreads--
+	if srcComputer.CurrentThreads > 0 {
+		srcComputer.CurrentThreads--
+	}
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 }
 
@@ -127,7 +129,9 @@ func (t *CacheTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
-	dstComputer.CurrentThreads--
+	if dstComputer.CurrentThreads > 0 {
+		dstComputer.CurrentThreads--
+	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
 }
 
@@ -181,7 +185,9 @@ func (t *CacheTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
-	dstComp.Paths[idx].CurrentThreads--
+	if dstComp.Paths[idx].CurrentThreads > 0 {
+		dstComp.Paths[idx].CurrentThreads--
+	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
 }
 
@@ -285,11 +291,11 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
 			_, err := os.Stat(dstSealed)
 			if err == nil {
-				if cmp.CurrentThreads < cmp.LimitThread {
+				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
 					t.occupyDstPathThread(idx, &cmp)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					log.Debugf("%v found same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					log.Debugf("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
@@ -302,10 +308,10 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.SectorID
 			_, err := os.Stat(dstUnSealed)
 			if err == nil {
-				if cmp.CurrentThreads < cmp.LimitThread {
+				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					log.Infof("%v found same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					log.Infof("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
