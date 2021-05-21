@@ -145,7 +145,7 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 			err = err2
 		}
 	}()
-	readed := 0
+
 	for {
 		if stop {
 			return errors.New(move_common.StoppedBySyscall)
@@ -160,12 +160,9 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 		}
 
 		// 限速
-		readed += len(buf)
 		if singleThreadMBPS != 0 {
-			if readed >= (singleThreadMBPS << 20) {
-				readed = 0
-				time.Sleep(time.Second * 1)
-			}
+			sleepTime := 1000000 / int64(singleThreadMBPS)
+			time.Sleep(time.Microsecond * time.Duration(sleepTime))
 		}
 
 		if _, err := destination.Write(buf[:n]); err != nil {
