@@ -67,7 +67,8 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
-
+		dstComputersMapSingleton.CLock.Lock()
+		defer dstComputersMapSingleton.CLock.Unlock()
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
@@ -94,7 +95,14 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 }
 
 func (t *CacheTask) canDo() bool {
-
+	srcComputersMapSingleton.CLock.Lock()
+	defer srcComputersMapSingleton.CLock.Unlock()
+	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
+	if srcComputer.CurrentThreads < srcComputer.LimitThread {
+		srcComputer.CurrentThreads++
+		srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
+		return true
+	}
 	return false
 }
 

@@ -8,12 +8,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/filecoin-project/go-state-types/big"
 	"move_sectors/move_common"
 	"move_sectors/mv_utils"
 	"os"
-	"path"
 	"sort"
 	"strings"
 	"syscall"
@@ -59,26 +57,36 @@ func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, erro
 }
 
 func (t *SealedTask) getBestDst() (string, string, int, error) {
-	dstC, err := getOneFreeDstComputer()
+	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
-		return "", "", 0, err
-	}
-
-	sort.Slice(dstC.Paths, func(i, j int) bool {
-		iw := big.NewInt(dstC.Paths[i].CurrentThreads)
-		jw := big.NewInt(dstC.Paths[j].CurrentThreads)
-		return iw.GreaterThanEqual(jw)
-	})
-
-	for idx, p := range dstC.Paths {
-		var stat = new(syscall.Statfs_t)
-		_ = syscall.Statfs(p.Location, stat)
-		if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
-			t.occupyDstPathThread(idx, dstC)
-			return p.Location, dstC.Ip, idx, nil
+		if err.Error() == move_common.FondGroupButTooMuchThread {
+			return "", "", 0, err
 		}
+		dstComputersMapSingleton.CLock.Lock()
+		defer dstComputersMapSingleton.CLock.Unlock()
+		dstC, err := getOneFreeDstComputer()
+		if err != nil {
+			return "", "", 0, err
+		}
+
+		sort.Slice(dstC.Paths, func(i, j int) bool {
+			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
+			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
+			return iw.GreaterThanEqual(jw)
+		})
+
+		for idx, p := range dstC.Paths {
+			var stat = new(syscall.Statfs_t)
+			_ = syscall.Statfs(p.Location, stat)
+			if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
+				t.occupyDstPathThread(idx, dstC)
+				return p.Location, dstC.Ip, idx, nil
+			}
+		}
+		return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 	}
-	return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
+
+	return dir, s, i, nil
 }
 
 func (t *SealedTask) canDo() bool {
@@ -170,76 +178,6 @@ func (t *SealedTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
 }
 
-func (t *SealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error) {
-	paths := make([]string, 0)
-	var TreeRNum int
-	switch t.SealProofType {
-	case ProofType32G:
-		TreeRNum = 8
-	case ProofType64G:
-		TreeRNum = 16
-	default:
-		return paths, errors.New(fmt.Sprintf("wrong file task SealProofType: %d", t.SealProofType))
-	}
-
-	var cacheDir string
-	var sealedPath string
-
-	if oriDst == "" {
-		sealedPath = t.SealedSrc
-	} else {
-		sealedPath = strings.Replace(t.SealedSrc, t.OriSrc, oriDst, 1)
-	}
-
-	paths = append(paths,
-		path.Join(cacheDir, "t_aux"),
-		path.Join(cacheDir, "p_aux"),
-	)
-	for i := 0; i < TreeRNum; i++ {
-		paths = append(paths, path.Join(cacheDir, fmt.Sprintf(TreeRFormat, i)))
-	}
-	paths = append(paths, sealedPath)
-	return paths, nil
-}
-
-func (t *SealedTask) checkIsCopied(cfg *Config) bool {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-
-	for _, v := range dstComputersMapSingleton.CMap {
-		for _, p := range v.Paths {
-			filePaths, err := t.makeDstPathSliceForCheckIsCopied(p.Location)
-			if err != nil {
-				log.Error(err)
-			}
-			tag := 1
-			for _, singleFilePath := range filePaths {
-				src := strings.Replace(singleFilePath, p.Location, t.OriSrc, 1)
-				statSrc, _ := os.Stat(src)
-				statDst, err := os.Stat(singleFilePath)
-				// if existed,check hash
-				if err == nil {
-					if statDst.Size() == statSrc.Size() {
-						srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), cfg.Chunks)
-						dstHash, _ := mv_utils.CalFileHash(singleFilePath, statDst.Size(), cfg.Chunks)
-						if srcHash == dstHash && srcHash != "" && dstHash != "" {
-							tag = tag * 1
-						} else {
-							tag = tag * 0
-						}
-					}
-				} else {
-					tag = tag * 0
-				}
-			}
-			if tag == 1 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (t *SealedTask) checkSourceSize() ([]string, error) {
 	var paths = make([]string, 0)
 
@@ -293,4 +231,47 @@ func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 		}
 	}
 	return false
+}
+
+func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+
+	// search cache at first
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		for idx, p := range cmp.Paths {
+			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
+			_, err := os.Stat(dstCache)
+			if err == nil {
+				if cmp.CurrentThreads < cmp.LimitThread {
+					return p.Location, cmp.Ip, idx, nil
+				} else {
+					if showLogDetail {
+						log.Debugf("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					}
+					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
+				}
+			}
+		}
+	}
+
+	// search unSealed
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		for idx, p := range cmp.Paths {
+			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.SectorID
+			_, err := os.Stat(dstUnSealed)
+			if err == nil {
+				if cmp.CurrentThreads < cmp.LimitThread {
+					return p.Location, cmp.Ip, idx, nil
+				} else {
+					if showLogDetail {
+						log.Infof("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					}
+					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
+				}
+			}
+		}
+	}
+
+	return "", "", 0, errors.New("no same group dir")
 }

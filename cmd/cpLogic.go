@@ -66,6 +66,7 @@ func initializeComputerMapSingleton(cfg *Config) error {
 
 // init task list
 func initializeTaskList(cfg *Config) error {
+	log.Info("start to init tasks")
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		for _, src := range srcComputer.Paths {
 			if stop {
@@ -163,7 +164,7 @@ func initializeTaskList(cfg *Config) error {
 			srcPaths, err := op.checkSourceSize()
 			if err != nil {
 				if skipSourceError {
-					return nil
+					continue
 				} else {
 					return err
 				}
@@ -171,7 +172,7 @@ func initializeTaskList(cfg *Config) error {
 
 			// check is already existed in dst
 			if op.checkIsExistedInDst(srcPaths, cfg) {
-				return nil
+				continue
 			}
 
 			// add op
@@ -182,14 +183,13 @@ func initializeTaskList(cfg *Config) error {
 			}
 		}
 	}
+	log.Info("tasks init done")
 	return nil
 }
 
 func startWork(cfg *Config) {
 	// init task list
-	log.Info("start to init tasks")
 	err := initializeTaskList(cfg)
-	log.Info("tasks init done")
 	if err != nil {
 		log.Error(err)
 		return

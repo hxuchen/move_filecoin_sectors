@@ -54,11 +54,10 @@ type Operation interface {
 	freeDstPathThread(idx int)
 	checkIsExistedInDst(srcPaths []string, cfg *Config) bool
 	checkSourceSize() ([]string, error)
+	tryToFindGroupDir() (string, string, int, error)
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		if cmp.CurrentThreads < cmp.LimitThread {
 			cmp.CurrentThreads++
