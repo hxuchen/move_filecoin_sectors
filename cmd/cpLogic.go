@@ -211,7 +211,7 @@ func startWork(cfg *Config) {
 					// get one best dst
 					log.Debugf("start to get best dst fot %v", t.getInfo())
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
-					log.Debugf("get best dst done for %v", t.getInfo())
+					log.Debugf("got best dst done for %v", t.getInfo())
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
 							continue

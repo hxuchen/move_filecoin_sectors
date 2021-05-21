@@ -58,8 +58,6 @@ type Operation interface {
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		if cmp.CurrentThreads < cmp.LimitThread {
 			cmp.CurrentThreads++

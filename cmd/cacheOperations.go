@@ -62,13 +62,15 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 }
 
 func (t *CacheTask) getBestDst() (string, string, int, error) {
+	log.Debugf("finding best dst, %s", t.SectorID)
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
 	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
 
-		log.Debugf("finding best dst, %s", t.SectorID)
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
@@ -79,7 +81,7 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 			return iw.GreaterThanEqual(jw)
 		})
-		log.Debugf("selecting dst paths")
+		log.Debugf("selecting dst paths for %s", t.SectorID)
 		for idx, p := range dstC.Paths {
 			var stat = new(syscall.Statfs_t)
 			_ = syscall.Statfs(p.Location, stat)
@@ -90,7 +92,7 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 		}
 		return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 	}
-
+	log.Debugf("found group path for %s cache", t.SectorID)
 	return dir, s, i, nil
 }
 
@@ -168,8 +170,6 @@ func (t *CacheTask) fullInfo(dstOri, dstIp string) {
 }
 
 func (t *CacheTask) occupyDstPathThread(idx int, c *Computer) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
 }
@@ -275,8 +275,6 @@ func (t *CacheTask) checkSourceSize() ([]string, error) {
 }
 
 func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
 	log.Debugf("finding group dst, %s", t.SectorID)
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
@@ -285,9 +283,10 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread {
+					t.occupyDstPathThread(idx, &cmp)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					log.Debugf("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					log.Debugf("%v found same group dir on %s, but computer too much, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
@@ -303,7 +302,7 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 				if cmp.CurrentThreads < cmp.LimitThread {
 					return p.Location, cmp.Ip, idx, nil
 				} else {
-					log.Infof("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
+					log.Infof("%v found same group dir on %s, but computer too much, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
