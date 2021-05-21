@@ -44,26 +44,42 @@ sudo make install
 
    配置完配置文件后使用如下命令启动程序：
 
-   - 拷贝cache和sealed文件：
+   - 拷贝cache文件：
 
    ```shell
-   nohup move_sectors run >> ~/move_sectors.log &
+   nohup move_sectors run --Cache >> ~/move_sectors.log &
    # 或者指定配置文件
-   nohup move_sectors run --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --Cache --path configPath >> ~/move_sectors.log &
    ```
 
-   - 拷贝unsealed文件
+   - 拷贝sealed文件
 
+   ```shell
+   nohup move_sectors run --Sealed >> ~/move_sectors.log &
+   # 或者指定配置文件
+   nohup move_sectors run --Sealed --path configPath >> ~/move_sectors.log &
+   ```
+
+   
+
+   - 拷贝unsealed文件
+   
    ```shell
    nohup move_sectors run --UnSealed >> ~/move_sectors.log &
    # 或者指定配置文件
    nohup move_sectors run --UnSealed --path configPath >> ~/move_sectors.log &
    ```
-
+   
    - 使用以下环境变量可以打印详细日志
-
+   
    ```shell
    export SHOW_LOG_DETAIL=1
+   ```
+   
+   - 如果要跳过大小不对的文件，让程序继续运行
+   
+   ```shell
+   # 在命令行中添加--SkipSourceError
    ```
    
    
