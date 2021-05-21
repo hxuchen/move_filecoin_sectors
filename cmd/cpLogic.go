@@ -167,7 +167,9 @@ func initializeTaskList(cfg *Config) error {
 				var threadChan = make(chan struct{}, runtime.NumCPU())
 				var lastOpDone = make(chan struct{}, 1)
 				for idx, op := range ops {
-
+					if stop {
+						return errors.New(move_common.StoppedBySyscall)
+					}
 					// checkSourceSize
 					log.Debugf("check source size of %v", op.getInfo())
 					srcPaths, err := op.checkSourceSize()
