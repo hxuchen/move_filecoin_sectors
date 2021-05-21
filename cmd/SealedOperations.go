@@ -122,23 +122,6 @@ func (t *SealedTask) setStatus(st string) {
 
 func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start tp copying %v", *t)
-	// copying cache
-	//err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
-	//if err != nil {
-	//	if err.Error() == move_common.StoppedBySyscall {
-	//		log.Warn(err)
-	//	} else {
-	//		log.Error(err)
-	//	}
-	//	t.releaseSrcComputer()
-	//	t.releaseDstComputer()
-	//	t.freeDstPathThread(dstPathIdxInComp)
-	//	os.RemoveAll(t.CacheDstDir)
-	//	taskListSingleton.TLock.Lock()
-	//	t.setStatus(StatusOnWaiting)
-	//	taskListSingleton.TLock.Unlock()
-	//	return
-	//}
 	// copying sealed
 	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {

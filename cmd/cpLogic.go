@@ -92,10 +92,23 @@ func initializeTaskList(cfg *Config) error {
 						if cacheTask == nil {
 							return nil
 						}
-
-						if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-							log.Infof("task %v init done", cacheTask)
+						// checkSourceSize
+						srcPaths, err := cacheTask.checkSourceSize()
+						if err != nil {
+							if skipSourceError {
+								return nil
+							} else {
+								return err
+							}
 						}
+						// check is already existed in dst
+						if cacheTask.checkIsExistedInDst(srcPaths, cfg) {
+							return nil
+						}
+
+						//if showLogDetail {
+						//	log.Infof("task %v init done", cacheTask)
+						//}
 
 						// add op
 						taskListSingleton.Ops = append(taskListSingleton.Ops, cacheTask)
@@ -195,12 +208,14 @@ func startWork(cfg *Config) {
 					// get one best dst
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
-						if err.Error() != move_common.NoDstSuitableForNow {
-							log.Warn(err)
-						} else {
-							if os.Getenv("SHOW_LOG_DETAIL") == "1" {
+						if err.Error() == move_common.FondGroupButTooMuchThread {
+							continue
+						} else if err.Error() == move_common.NoDstSuitableForNow {
+							if showLogDetail {
 								log.Warn(err)
 							}
+						} else {
+							log.Warn(err)
 						}
 						t.releaseSrcComputer()
 						t.releaseDstComputer()

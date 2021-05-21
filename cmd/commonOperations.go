@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"move_sectors/move_common"
 	"move_sectors/mv_utils"
 	"os"
@@ -51,18 +52,18 @@ type Operation interface {
 	fullInfo(dstOri, dstIp string)
 	occupyDstPathThread(idx int, c *Computer)
 	freeDstPathThread(idx int)
-	makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error)
-	checkIsCopied(cfg *Config) bool
+	checkIsExistedInDst(srcPaths []string, cfg *Config) bool
+	checkSourceSize() ([]string, error)
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
-	for _, com := range dstComputersMapSingleton.CMap {
-		if com.CurrentThreads < com.LimitThread {
-			com.CurrentThreads++
-			dstComputersMapSingleton.CMap[com.Ip] = com
-			return &com, nil
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		if cmp.CurrentThreads < cmp.LimitThread {
+			cmp.CurrentThreads++
+			dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+			return &cmp, nil
 		}
 	}
 	return nil, errors.New("no free dst computers for now")
@@ -193,4 +194,56 @@ func checkAndFindCacheSrc(cacheSrcDir, oriSrc string) string {
 		}
 	}
 	return cacheSrcDir
+}
+
+func getStandSize(proofType, path string) (int64, error) {
+	var (
+		baseSize  int64
+		treeRSize int64
+		pAuxSize  int64
+	)
+	switch proofType {
+	case ProofType32G:
+		baseSize = 34359738368
+		treeRSize = 9586976
+		pAuxSize = 64
+	case ProofType64G:
+		baseSize = 68719476736
+		treeRSize = 9586976
+		pAuxSize = 64
+	default:
+		return 0, errors.New(fmt.Sprintf("this kind of SealProofType: %d should never existed", proofType))
+	}
+
+	if strings.Contains(path, "unsealed") || strings.Contains(path, "sealed") {
+		return baseSize, nil
+	} else if strings.Contains(path, "tree-r") {
+		return treeRSize, nil
+	} else if strings.Contains(path, "p_aux") {
+		return pAuxSize, nil
+	} else {
+		return 0, errors.New(fmt.Sprintf("this kind of path: %s should never existed", path))
+	}
+
+}
+
+func compareSize(path string, base int64, delta int) error {
+	errFormat := "wrong file size,path: %s,required size: %d, got size: %d"
+	if fileStat, err := os.Stat(path); err != nil {
+		return err
+	} else {
+		if math.Abs(float64(fileStat.Size()-base)) > float64(delta) {
+			return errors.New(fmt.Sprintf(errFormat, path, base, fileStat.Size()))
+		}
+	}
+	return nil
+}
+
+func recordCalLogIfNeed(calFunc func(string, int64, int64) (string, error), filePath string, size int64, chunks int64) (string, error) {
+	since := time.Now()
+	s, err := calFunc(filePath, size, chunks)
+	if showLogDetail {
+		log.Infof("cal %s calHash cost %v", filePath, time.Now().Sub(since))
+	}
+	return s, err
 }

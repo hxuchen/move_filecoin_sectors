@@ -27,7 +27,9 @@ var (
 		CLock: new(sync.Mutex),
 	}
 	stop              = false
+	skipSourceError   = false
 	fileType          move_common.FileType
+	showLogDetail     = false
 	taskListSingleton = TaskList{
 		Ops:   make([]Operation, 0),
 		TLock: new(sync.Mutex),
@@ -92,6 +94,13 @@ var CpCmd = &cli.Command{
 			Hidden:   false,
 			Value:    false,
 		},
+		&cli.BoolFlag{
+			Name:     "SkipSourceError",
+			Usage:    "Declare whether to copying cache files",
+			Required: false,
+			Hidden:   false,
+			Value:    false,
+		},
 	},
 
 	Action: func(cctx *cli.Context) error {
@@ -106,6 +115,10 @@ var CpCmd = &cli.Command{
 			defer lock.Close()
 		} else {
 			return errors.New("create file lock failed")
+		}
+
+		if os.Getenv("SHOW_LOG_DETAIL") == "1" {
+			showLogDetail = true
 		}
 
 		// which kind file will be moved
@@ -125,6 +138,10 @@ var CpCmd = &cli.Command{
 		}
 		if cctx.Bool("Cache") {
 			fileType = move_common.Cache
+		}
+
+		if cctx.Bool("SkipSourceError") {
+			skipSourceError = true
 		}
 
 		// load config
