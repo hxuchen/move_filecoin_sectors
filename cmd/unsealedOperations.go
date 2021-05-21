@@ -8,7 +8,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/filecoin-project/go-state-types/big"
 	"move_sectors/move_common"
 	"move_sectors/mv_utils"
@@ -16,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type UnSealedTask struct {
@@ -50,8 +50,8 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask
 	return task, nil
 }
 
-func (t *UnSealedTask) printInfo() {
-	fmt.Println(*t)
+func (t *UnSealedTask) getInfo() interface{} {
+	return *t
 }
 
 func (t *UnSealedTask) getBestDst() (string, string, int, error) {
@@ -162,23 +162,55 @@ func (t *UnSealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string
 	return nil, nil
 }
 
-func (t *UnSealedTask) checkIsCopied(cfg *Config) bool {
+func (t *UnSealedTask) checkSourceSize() ([]string, error) {
+	var paths = make([]string, 0)
+
+	size, err := getStandSize(t.SealProofType, t.UnSealedSrc)
+	if err != nil {
+		return paths, err
+	}
+	err = compareSize(t.UnSealedSrc, size, 16<<10)
+	if err != nil {
+		return paths, err
+	}
+
+	paths = append(paths, t.UnSealedSrc)
+	return paths, nil
+}
+
+func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
+	sinceTime := time.Now()
 	for _, v := range dstComputersMapSingleton.CMap {
 		for _, p := range v.Paths {
-			fileDstPath := strings.Replace(t.UnSealedSrc, t.OriSrc, p.Location, 1)
-			statSrc, _ := os.Stat(t.UnSealedSrc)
-			statDst, err := os.Stat(fileDstPath)
-			// if existed,check hash
-			if err == nil {
-				if statDst.Size() == statSrc.Size() {
-					srcHash, _ := mv_utils.CalFileHash(t.UnSealedSrc, statSrc.Size(), cfg.Chunks)
-					dstHash, _ := mv_utils.CalFileHash(fileDstPath, statDst.Size(), cfg.Chunks)
-					if srcHash == dstHash && srcHash != "" && dstHash != "" {
-						return true
+			tag := 1
+			for _, singleUnSealedPath := range srcPaths {
+				dst := strings.Replace(singleUnSealedPath, t.OriSrc, p.Location, 1)
+				statSrc, _ := os.Stat(singleUnSealedPath)
+				statDst, err := os.Stat(dst)
+				// if existed,check hash
+				if err == nil {
+					if statDst.Size() == statSrc.Size() {
+						srcHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, singleUnSealedPath, statSrc.Size(), cfg.Chunks)
+						dstHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, dst, statDst.Size(), cfg.Chunks)
+						if srcHash == dstHash && srcHash != "" && dstHash != "" {
+							tag = tag * 1
+						} else {
+							tag = tag * 0
+						}
 					}
+				} else {
+					tag = tag * 0
 				}
+			}
+			if tag == 1 {
+				if showLogDetail {
+					log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
+						*t, p.Location, time.Now().Sub(sinceTime))
+					log.Debugf("task %v is existed in dst", *t)
+				}
+				return true
 			}
 		}
 	}

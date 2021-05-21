@@ -98,8 +98,8 @@ func (t *CacheTask) canDo() bool {
 	return false
 }
 
-func (t *CacheTask) printInfo() {
-	fmt.Println(*t)
+func (t *CacheTask) getInfo() interface{} {
+	return *t
 }
 
 func (t *CacheTask) releaseSrcComputer() {
@@ -225,9 +225,9 @@ func (t *CacheTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 			}
 			if tag == 1 {
 				if showLogDetail {
-					log.Infof("src cache file: %v already existed in dst %s,SealedTask done,check cost %v",
+					log.Debugf("src cache file: %v already existed in dst %s,SealedTask done,check cost %v",
 						*t, p.Location, time.Now().Sub(sinceTime))
-					log.Infof("task %v is existed in dst", *t)
+					log.Debugf("task %v is existed in dst", *t)
 				}
 				return true
 			}
@@ -282,7 +282,7 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					if showLogDetail {
-						log.Infof("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
+						log.Debugf("%v fond same group dir on %s, but computer too much, will copy later", *t, p.Location)
 					}
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}

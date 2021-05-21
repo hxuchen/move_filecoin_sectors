@@ -41,7 +41,7 @@ type TaskList struct {
 }
 
 type Operation interface {
-	printInfo()
+	getInfo() interface{}
 	canDo() bool
 	getBestDst() (string, string, int, error)
 	startCopy(cfg *Config, dstPathIdxInComp int)
@@ -243,7 +243,7 @@ func recordCalLogIfNeed(calFunc func(string, int64, int64) (string, error), file
 	since := time.Now()
 	s, err := calFunc(filePath, size, chunks)
 	if showLogDetail {
-		log.Infof("cal %s calHash cost %v", filePath, time.Now().Sub(since))
+		log.Debugf("cal %s calHash cost %v", filePath, time.Now().Sub(since))
 	}
 	return s, err
 }

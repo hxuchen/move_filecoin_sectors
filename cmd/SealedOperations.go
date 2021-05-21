@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type SealedTask struct {
@@ -92,8 +93,8 @@ func (t *SealedTask) canDo() bool {
 	return false
 }
 
-func (t *SealedTask) printInfo() {
-	fmt.Println(*t)
+func (t *SealedTask) getInfo() interface{} {
+	return *t
 }
 
 func (t *SealedTask) releaseSrcComputer() {
@@ -185,10 +186,8 @@ func (t *SealedTask) makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, 
 	var sealedPath string
 
 	if oriDst == "" {
-		//cacheDir = t.CacheSrcDir
 		sealedPath = t.SealedSrc
 	} else {
-		//cacheDir = strings.Replace(t.CacheSrcDir, t.OriSrc, oriDst, 1)
 		sealedPath = strings.Replace(t.SealedSrc, t.OriSrc, oriDst, 1)
 	}
 
@@ -234,6 +233,61 @@ func (t *SealedTask) checkIsCopied(cfg *Config) bool {
 				}
 			}
 			if tag == 1 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (t *SealedTask) checkSourceSize() ([]string, error) {
+	var paths = make([]string, 0)
+
+	size, err := getStandSize(t.SealProofType, t.SealedSrc)
+	if err != nil {
+		return paths, err
+	}
+	err = compareSize(t.SealedSrc, size, 16<<10)
+	if err != nil {
+		return paths, err
+	}
+
+	paths = append(paths, t.SealedSrc)
+	return paths, nil
+}
+
+func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	sinceTime := time.Now()
+	for _, v := range dstComputersMapSingleton.CMap {
+		for _, p := range v.Paths {
+			tag := 1
+			for _, singleSealedPath := range srcPaths {
+				dst := strings.Replace(singleSealedPath, t.OriSrc, p.Location, 1)
+				statSrc, _ := os.Stat(singleSealedPath)
+				statDst, err := os.Stat(dst)
+				// if existed,check hash
+				if err == nil {
+					if statDst.Size() == statSrc.Size() {
+						srcHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, singleSealedPath, statSrc.Size(), cfg.Chunks)
+						dstHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, dst, statDst.Size(), cfg.Chunks)
+						if srcHash == dstHash && srcHash != "" && dstHash != "" {
+							tag = tag * 1
+						} else {
+							tag = tag * 0
+						}
+					}
+				} else {
+					tag = tag * 0
+				}
+			}
+			if tag == 1 {
+				if showLogDetail {
+					log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
+						*t, p.Location, time.Now().Sub(sinceTime))
+					log.Debugf("task %v is existed in dst", *t)
+				}
 				return true
 			}
 		}

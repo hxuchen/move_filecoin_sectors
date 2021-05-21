@@ -71,6 +71,7 @@ func initializeTaskList(cfg *Config) error {
 			if stop {
 				return errors.New("stopped by signal")
 			}
+			var op Operation
 			switch fileType {
 			case move_common.Cache:
 				cacheSrcDir := strings.TrimRight(src.Location, "/") + "/cache"
@@ -92,26 +93,8 @@ func initializeTaskList(cfg *Config) error {
 						if cacheTask == nil {
 							return nil
 						}
-						// checkSourceSize
-						srcPaths, err := cacheTask.checkSourceSize()
-						if err != nil {
-							if skipSourceError {
-								return nil
-							} else {
-								return err
-							}
-						}
-						// check is already existed in dst
-						if cacheTask.checkIsExistedInDst(srcPaths, cfg) {
-							return nil
-						}
 
-						//if showLogDetail {
-						//	log.Infof("task %v init done", cacheTask)
-						//}
-
-						// add op
-						taskListSingleton.Ops = append(taskListSingleton.Ops, cacheTask)
+						op = cacheTask
 					}
 					return err
 				})
@@ -130,21 +113,16 @@ func initializeTaskList(cfg *Config) error {
 					if !info.Mode().IsRegular() {
 						return nil
 					}
-					cacheSealedTask, err := newSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
+					sealedTask, err := newSealedTask(path, info.Name(), src.Location, srcComputer.Ip)
 					if err != nil {
 						return err
 					}
 					// do not cp file which isn't 32G or 64G,or which size error
-					if cacheSealedTask == nil {
+					if sealedTask == nil {
 						return nil
 					}
-					if cacheSealedTask.checkIsCopied(cfg) {
-						cacheSealedTask.setStatus(StatusDone)
-					}
-					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-						log.Infof("task %v init done", cacheSealedTask)
-					}
-					taskListSingleton.Ops = append(taskListSingleton.Ops, cacheSealedTask)
+					op = sealedTask
+
 					return err
 				})
 				if err != nil {
@@ -166,18 +144,41 @@ func initializeTaskList(cfg *Config) error {
 					if err != nil {
 						return err
 					}
-					if unsealedTask.checkIsCopied(cfg) {
-						unsealedTask.setStatus(StatusDone)
+
+					// do not cp file which isn't 32G or 64G,or which size error
+					if unsealedTask == nil {
+						return nil
 					}
-					if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-						log.Infof("task %v init done", unsealedTask)
-					}
-					taskListSingleton.Ops = append(taskListSingleton.Ops, unsealedTask)
+
+					op = unsealedTask
+
 					return err
 				})
 				if err != nil {
 					return err
 				}
+			}
+
+			// checkSourceSize
+			srcPaths, err := op.checkSourceSize()
+			if err != nil {
+				if skipSourceError {
+					return nil
+				} else {
+					return err
+				}
+			}
+
+			// check is already existed in dst
+			if op.checkIsExistedInDst(srcPaths, cfg) {
+				return nil
+			}
+
+			// add op
+			taskListSingleton.Ops = append(taskListSingleton.Ops, op)
+
+			if showLogDetail {
+				log.Infof("task %v init done", op.getInfo())
 			}
 		}
 	}
@@ -212,7 +213,7 @@ func startWork(cfg *Config) {
 							continue
 						} else if err.Error() == move_common.NoDstSuitableForNow {
 							if showLogDetail {
-								log.Warn(err)
+								log.Debug(err.Error())
 							}
 						} else {
 							log.Warn(err)
