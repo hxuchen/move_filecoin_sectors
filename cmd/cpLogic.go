@@ -162,6 +162,9 @@ func initializeTaskList(cfg *Config) error {
 
 			if op != nil {
 				// checkSourceSize
+				if showLogDetail {
+					log.Debugf("check source size of %v", op.getInfo())
+				}
 				srcPaths, err := op.checkSourceSize()
 				if err != nil {
 					if skipSourceError {
@@ -172,6 +175,9 @@ func initializeTaskList(cfg *Config) error {
 				}
 
 				// check is already existed in dst
+				if showLogDetail {
+					log.Debugf("check file is already existed", op.getInfo())
+				}
 				if op.checkIsExistedInDst(srcPaths, cfg) {
 					continue
 				}
@@ -180,12 +186,12 @@ func initializeTaskList(cfg *Config) error {
 				taskListSingleton.Ops = append(taskListSingleton.Ops, op)
 
 				if showLogDetail {
-					log.Infof("task %v init done", op.getInfo())
+					log.Debugf("task %v init done", op.getInfo())
 				}
 			}
 		}
 	}
-	log.Info("tasks init done")
+	log.Info("all tasks init done")
 	return nil
 }
 
