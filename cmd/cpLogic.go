@@ -83,7 +83,7 @@ func initializeTaskList(cfg *Config) error {
 					if info == nil || err != nil {
 						return err
 					}
-					if info.Mode().IsDir() {
+					if info.Mode().IsDir() && path != cacheSrcDir {
 						// get initialized cacheTask
 						singleCacheSrcDir := cacheSrcDir + "/" + info.Name()
 						cacheTask, err := newCacheTask(singleCacheSrcDir, info.Name(), src.Location, srcComputer.Ip)
