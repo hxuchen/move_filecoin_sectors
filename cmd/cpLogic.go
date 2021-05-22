@@ -168,23 +168,25 @@ func initializeTaskList(cfg *Config) error {
 	}
 
 	if lenOps := len(ops); lenOps > 0 {
-		for idx, op := range ops {
+		for i, v := range ops {
 			if stop {
 				break
 			}
+			idx := i
+			op := v
+			// checkSourceSize
+			log.Debugf("check source size of %v", op.getInfo())
+			srcPaths, err := op.checkSourceSize()
+			if err != nil {
+				if skipSourceError {
+					continue
+				} else {
+					return err
+				}
+			}
+
 			select {
 			case threadChan <- struct{}{}:
-				// checkSourceSize
-				log.Debugf("check source size of %v", op.getInfo())
-				srcPaths, err := op.checkSourceSize()
-				if err != nil {
-					if skipSourceError {
-						continue
-					} else {
-						return err
-					}
-				}
-
 				go func() {
 					defer func() {
 						<-threadChan
