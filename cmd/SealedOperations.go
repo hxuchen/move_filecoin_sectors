@@ -24,7 +24,6 @@ type SealedTask struct {
 	OriSrc        string
 	SealedSrc     string
 	DstIp         string
-	CacheDstDir   string
 	SealedDst     string
 	TotalSize     int64
 	Status        string
