@@ -229,7 +229,8 @@ func startWork(cfg *Config) {
 	}
 	for {
 		allDone := true
-		for _, t := range taskListSingleton.Ops {
+		for _, v := range taskListSingleton.Ops {
+			t := v
 			if stop {
 				log.Warn(move_common.StoppedBySyscall)
 				waitingForAllTaskStop()
@@ -255,9 +256,7 @@ func startWork(cfg *Config) {
 						t.releaseDstComputer()
 						continue
 					}
-					taskListSingleton.TLock.Lock()
 					t.setStatus(StatusOnWorking)
-					taskListSingleton.TLock.Unlock()
 					t.fullInfo(dst, dstIp)
 					go t.startCopy(cfg, dstPathIdxInComp)
 				}

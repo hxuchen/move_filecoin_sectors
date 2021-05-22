@@ -89,25 +89,6 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 }
 
 func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
-	//statSrc, err := os.Stat(src)
-	//if err != nil {
-	//	return err
-	//}
-	//statDst, err := os.Stat(dst)
-	//if err == nil {
-	//	if statDst.Size() == statSrc.Size() {
-	//		srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), chunks)
-	//		dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
-	//		now := time.Now()
-	//		if srcHash == dstHash && srcHash != "" && dstHash != "" {
-	//			if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-	//				log.Infof("src file: %s already existed in dst %s,SealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
-	//			}
-	//			return nil
-	//		}
-	//	}
-	//}
-
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 
@@ -170,29 +151,6 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 		}
 	}
 	return
-}
-
-func checkAndFindCacheSrc(cacheSrcDir, oriSrc string) string {
-	// verify all src files existed, if not existed, find all computers
-	var needFindCacheSrcDir bool
-	if _, errCacheSrcDir := os.Stat(cacheSrcDir); errCacheSrcDir != nil && os.IsNotExist(errCacheSrcDir) {
-		cacheSrcDir = ""
-		needFindCacheSrcDir = true
-	}
-	if needFindCacheSrcDir {
-		var errFind error
-	FindCacheSrcLoopCache:
-		for _, comp := range srcComputersMapSingleton.CMap {
-			for _, singlePath := range comp.Paths {
-				cacheSrcDirTmp := strings.Replace(cacheSrcDir, oriSrc, strings.TrimRight(singlePath.Location, "/"), 1)
-				if _, errFind = os.Stat(cacheSrcDirTmp); errFind == nil {
-					cacheSrcDir = cacheSrcDirTmp
-					break FindCacheSrcLoopCache
-				}
-			}
-		}
-	}
-	return cacheSrcDir
 }
 
 func getStandSize(proofType, path string) (int64, error) {

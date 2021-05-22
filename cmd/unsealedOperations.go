@@ -127,10 +127,14 @@ func (t *UnSealedTask) releaseDstComputer() {
 }
 
 func (t *UnSealedTask) getStatus() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 
 func (t *UnSealedTask) setStatus(st string) {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
 	t.Status = st
 }
 
@@ -144,22 +148,16 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		} else {
 			log.Error(err)
 		}
-		t.releaseSrcComputer()
-		t.releaseDstComputer()
-		t.freeDstPathThread(dstPathIdxInComp)
 		os.Remove(t.UnSealedDst)
-		taskListSingleton.TLock.Lock()
 		t.setStatus(StatusOnWaiting)
-		taskListSingleton.TLock.Unlock()
-		return
+	} else {
+		t.setStatus(StatusDone)
+		log.Infof("task %v done", *t)
 	}
-	taskListSingleton.TLock.Lock()
-	t.setStatus(StatusDone)
-	taskListSingleton.TLock.Unlock()
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)
-	log.Infof("task %v done", *t)
+
 }
 
 func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
