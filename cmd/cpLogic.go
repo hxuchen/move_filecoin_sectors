@@ -201,6 +201,7 @@ func initializeTaskList(cfg *Config) error {
 
 					log.Debugf("task %v init done", op.getInfo())
 					if idx == lenOps-1 {
+						log.Debug("last op check done")
 						lastOpDone <- struct{}{}
 					}
 				}()
