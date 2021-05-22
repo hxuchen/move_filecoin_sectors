@@ -62,6 +62,7 @@ func getOneFreeDstComputer() (*Computer, error) {
 		if cmp.CurrentThreads < cmp.LimitThread {
 			cmp.CurrentThreads++
 			dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+			log.Debug(dstComputersMapSingleton)
 			return &cmp, nil
 		}
 	}

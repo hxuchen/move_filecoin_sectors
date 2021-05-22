@@ -100,6 +100,7 @@ func (t *SealedTask) canDo() bool {
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
 		srcComputer.CurrentThreads++
 		srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
+		log.Debug(srcComputersMapSingleton)
 		return true
 	}
 	return false
@@ -117,6 +118,7 @@ func (t *SealedTask) releaseSrcComputer() {
 		srcComputer.CurrentThreads--
 	}
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
+	log.Debug(srcComputersMapSingleton)
 }
 
 func (t *SealedTask) releaseDstComputer() {
@@ -127,6 +129,7 @@ func (t *SealedTask) releaseDstComputer() {
 		dstComputer.CurrentThreads--
 	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
+	log.Debug(dstComputersMapSingleton)
 }
 
 func (t *SealedTask) getStatus() string {
@@ -172,6 +175,7 @@ func (t *SealedTask) fullInfo(dstOri, dstIp string) {
 func (t *SealedTask) occupyDstPathThread(idx int, c *Computer) {
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
+	log.Debug(dstComputersMapSingleton)
 }
 
 func (t *SealedTask) freeDstPathThread(idx int) {
@@ -182,6 +186,7 @@ func (t *SealedTask) freeDstPathThread(idx int) {
 		dstComp.Paths[idx].CurrentThreads--
 	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
+	log.Debug(dstComputersMapSingleton)
 }
 
 func (t *SealedTask) checkSourceSize() ([]string, error) {
@@ -257,6 +262,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
 					t.occupyDstPathThread(idx, &cmp)
 					cmp.CurrentThreads++
 					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+					log.Debug(dstComputersMapSingleton)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
