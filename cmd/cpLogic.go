@@ -166,7 +166,8 @@ func initializeTaskList(cfg *Config) error {
 			}
 		}
 	}
-	if lenOps := len(ops); lenOps > 0 {
+	lenOps := len(ops)
+	if lenOps > 0 {
 		for idx, op := range ops {
 			if stop {
 				break
@@ -207,11 +208,11 @@ func initializeTaskList(cfg *Config) error {
 				}()
 			}
 		}
-		select {
-		case <-lastOpDone:
-			close(threadChan)
-			close(lastOpDone)
-		}
+	}
+	select {
+	case <-lastOpDone:
+		close(threadChan)
+		close(lastOpDone)
 	}
 	log.Info("all tasks init done")
 	return nil
