@@ -187,6 +187,10 @@ func initializeTaskList(cfg *Config) error {
 				go func() {
 					defer func() {
 						<-threadChan
+						if idx == lenOps-1 {
+							log.Debug("last op check done,idx is %d,task is %v", idx, op.getInfo())
+							lastOpDone <- struct{}{}
+						}
 					}()
 					// check is already existed in dst
 					log.Debugf("check file is already existed", op.getInfo())
@@ -200,20 +204,16 @@ func initializeTaskList(cfg *Config) error {
 					taskListSingleton.TLock.Unlock()
 
 					log.Debugf("task %v init done", op.getInfo())
-					if idx == lenOps-1 {
-						log.Debug("last op check done,idx is %d,task is %v", idx, op.getInfo())
-						lastOpDone <- struct{}{}
-					}
 				}()
 			}
 		}
 		select {
 		case <-lastOpDone:
+			close(threadChan)
+			close(lastOpDone)
 		}
 	}
 	log.Info("all tasks init done")
-	close(threadChan)
-	close(lastOpDone)
 	return nil
 }
 
