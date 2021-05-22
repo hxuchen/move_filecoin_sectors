@@ -269,6 +269,10 @@ func startWork(cfg *Config) {
 		if allDone {
 			break
 		}
+		if os.Getenv("SHOW_THREAD") == "1" {
+			log.Warn(srcComputersMapSingleton)
+			log.Warn(dstComputersMapSingleton)
+		}
 		time.Sleep(time.Second * 5)
 	}
 	log.Info("all task done")
