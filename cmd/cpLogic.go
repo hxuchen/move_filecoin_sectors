@@ -70,10 +70,6 @@ func initializeTaskList(cfg *Config) error {
 	log.Info("start to init tasks")
 	var threadChan = make(chan struct{}, runtime.NumCPU())
 	var lastOpDone = make(chan struct{}, 1)
-	defer func() {
-		close(threadChan)
-		close(lastOpDone)
-	}()
 	var ops = make([]Operation, 0)
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		log.Debugf("%v", srcComputersMapSingleton.CMap)
@@ -215,6 +211,8 @@ func initializeTaskList(cfg *Config) error {
 		}
 	}
 	log.Info("all tasks init done")
+	close(threadChan)
+	close(lastOpDone)
 	return nil
 }
 
