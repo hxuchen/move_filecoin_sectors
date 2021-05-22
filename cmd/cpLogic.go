@@ -227,6 +227,11 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
+	if os.Getenv("SHOW_DETAIL") == "1" {
+		for _, v := range taskListSingleton.Ops {
+			fmt.Println(v.getInfo())
+		}
+	}
 	for {
 		allDone := true
 		for _, v := range taskListSingleton.Ops {
@@ -269,7 +274,7 @@ func startWork(cfg *Config) {
 		if allDone {
 			break
 		}
-		if os.Getenv("SHOW_THREAD") == "1" {
+		if os.Getenv("SHOW_DETAIL") == "1" {
 			fmt.Println("src computer thread info:")
 			for ip, v := range srcComputersMapSingleton.CMap {
 				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
