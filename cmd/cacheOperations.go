@@ -170,6 +170,8 @@ func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 }
 
 func (t *CacheTask) fullInfo(dstOri, dstIp string) {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
 	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, dstOri, 1)
 	t.DstIp = dstIp
 }
@@ -290,6 +292,14 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+
+					var stat = new(syscall.Statfs_t)
+					_ = syscall.Statfs(p.Location, stat)
+					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
+						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
+						return "", "", 0, errors.New(move_common.NotEnoughSpace)
+					}
+
 					t.occupyDstPathThread(idx, &cmp)
 					cmp.CurrentThreads++
 					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
@@ -309,6 +319,17 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstUnSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+
+					var stat = new(syscall.Statfs_t)
+					_ = syscall.Statfs(p.Location, stat)
+					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
+						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
+						return "", "", 0, errors.New(move_common.NotEnoughSpace)
+					}
+
+					t.occupyDstPathThread(idx, &cmp)
+					cmp.CurrentThreads++
+					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Infof("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)

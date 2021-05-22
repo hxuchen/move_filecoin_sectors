@@ -6,4 +6,5 @@ const (
 	NoDstSuitableForNow       = "NoDstSuitableForNow"
 	StoppedBySyscall          = "stopped by syscall"
 	FondGroupButTooMuchThread = "FondGroupButTooMuchThread"
+	NotEnoughSpace            = "NotEnoughSpace"
 )
