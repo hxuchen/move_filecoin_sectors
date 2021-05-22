@@ -188,7 +188,7 @@ func initializeTaskList(cfg *Config) error {
 					defer func() {
 						<-threadChan
 						if idx == lenOps-1 {
-							log.Debug("last op check done,idx is %d,task is %v", idx, op.getInfo())
+							log.Debugf("last op check done,idx is %d,task is %v", idx, op.getInfo())
 							lastOpDone <- struct{}{}
 						}
 					}()
