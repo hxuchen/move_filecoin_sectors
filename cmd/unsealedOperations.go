@@ -56,24 +56,30 @@ func (t *UnSealedTask) getInfo() interface{} {
 }
 
 func (t *UnSealedTask) getBestDst() (string, string, int, error) {
+	log.Debugf("finding best dst, %s", t.SectorID)
+
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+
 	dir, s, i, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
-		dstComputersMapSingleton.CLock.Lock()
-		defer dstComputersMapSingleton.CLock.Unlock()
+
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
 		}
 
+		log.Debugf("sorting dst paths")
 		sort.Slice(dstC.Paths, func(i, j int) bool {
 			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
 			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 			return iw.GreaterThanEqual(jw)
 		})
 
+		log.Debugf("selecting dst paths for %s", t.SectorID)
 		for idx, p := range dstC.Paths {
 			var stat = new(syscall.Statfs_t)
 			_ = syscall.Statfs(p.Location, stat)
@@ -238,6 +244,7 @@ func (t *UnSealedTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+					t.occupyDstPathThread(idx, &cmp)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)

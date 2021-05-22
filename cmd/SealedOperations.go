@@ -66,8 +66,6 @@ func (t *SealedTask) getBestDst() (string, string, int, error) {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
-		dstComputersMapSingleton.CLock.Lock()
-		defer dstComputersMapSingleton.CLock.Unlock()
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
@@ -249,6 +247,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstCache)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+					t.occupyDstPathThread(idx, &cmp)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
