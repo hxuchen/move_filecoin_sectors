@@ -270,8 +270,14 @@ func startWork(cfg *Config) {
 			break
 		}
 		if os.Getenv("SHOW_THREAD") == "1" {
-			log.Warn(srcComputersMapSingleton)
-			log.Warn(dstComputersMapSingleton)
+			fmt.Println("src computer thread info:")
+			for ip, v := range srcComputersMapSingleton.CMap {
+				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
+			}
+			fmt.Println("dst computer thread info:")
+			for ip, v := range dstComputersMapSingleton.CMap {
+				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
+			}
 		}
 		time.Sleep(time.Second * 5)
 	}
