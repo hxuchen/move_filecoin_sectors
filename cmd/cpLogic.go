@@ -168,7 +168,9 @@ func initializeTaskList(cfg *Config) error {
 	}
 	lenOps := len(ops)
 	if lenOps > 0 {
-		for idx, op := range ops {
+		idx := 0
+		for _, op := range ops {
+			idx++
 			if stop {
 				break
 			}
@@ -188,7 +190,7 @@ func initializeTaskList(cfg *Config) error {
 				go func() {
 					defer func() {
 						<-threadChan
-						if idx == lenOps-1 {
+						if idx == lenOps {
 							log.Debugf("last op check done,idx is %d,task is %v", idx, op.getInfo())
 							lastOpDone <- struct{}{}
 						}
