@@ -291,6 +291,8 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
 					t.occupyDstPathThread(idx, &cmp)
+					cmp.CurrentThreads++
+					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)

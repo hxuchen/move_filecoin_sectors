@@ -273,10 +273,17 @@ func startWork(cfg *Config) {
 			fmt.Println("src computer thread info:")
 			for ip, v := range srcComputersMapSingleton.CMap {
 				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
+				for _, p := range v.Paths {
+					fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
+				}
 			}
+
 			fmt.Println("dst computer thread info:")
 			for ip, v := range dstComputersMapSingleton.CMap {
 				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
+				for _, p := range v.Paths {
+					fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
+				}
 			}
 		}
 		time.Sleep(time.Second * 5)
