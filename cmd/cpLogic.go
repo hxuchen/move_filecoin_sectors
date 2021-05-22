@@ -185,9 +185,6 @@ func initializeTaskList(cfg *Config) error {
 			select {
 			case threadChan <- struct{}{}:
 				go func() {
-					defer func() {
-						<-threadChan
-					}()
 					// check is already existed in dst
 					log.Debugf("check file is already existed", op.getInfo())
 					if op.checkIsExistedInDst(srcPaths, cfg) {
@@ -201,9 +198,10 @@ func initializeTaskList(cfg *Config) error {
 
 					log.Debugf("task %v init done", op.getInfo())
 					if idx == lenOps-1 {
-						log.Debug("last op check done")
+						log.Debug("last op check done,idx is %d", idx)
 						lastOpDone <- struct{}{}
 					}
+					<-threadChan
 				}()
 			}
 		}
