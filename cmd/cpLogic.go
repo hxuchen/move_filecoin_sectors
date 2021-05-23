@@ -273,11 +273,14 @@ func startWork(cfg *Config) {
 		}
 		if os.Getenv("SHOW_DETAIL") == "1" {
 			fmt.Println("src computer thread info:")
+			srcComputersMapSingleton.CLock.Lock()
 			for ip, v := range srcComputersMapSingleton.CMap {
 				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
 			}
+			srcComputersMapSingleton.CLock.Unlock()
 
 			fmt.Println("dst computer thread info:")
+			dstComputersMapSingleton.CLock.Lock()
 			for ip, v := range dstComputersMapSingleton.CMap {
 				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
 				for _, p := range v.Paths {
@@ -309,7 +312,7 @@ func startWork(cfg *Config) {
 					}
 				}
 			}
-
+			dstComputersMapSingleton.CLock.Unlock()
 		}
 		time.Sleep(time.Second * 5)
 	}
