@@ -127,8 +127,8 @@ func (t *UnSealedTask) releaseDstComputer() {
 }
 
 func (t *UnSealedTask) getStatus() string {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
+	//taskListSingleton.TLock.Lock()
+	//defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 

@@ -136,8 +136,8 @@ func (t *CacheTask) releaseDstComputer() {
 }
 
 func (t *CacheTask) getStatus() string {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
+	//taskListSingleton.TLock.Lock()
+	//defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 
