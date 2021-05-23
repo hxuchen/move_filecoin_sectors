@@ -170,7 +170,7 @@ func initializeTaskList(cfg *Config) error {
 	if lenOps := len(ops); lenOps > 0 {
 		for i, v := range ops {
 			if stop {
-				break
+				return nil
 			}
 			idx := i
 			op := v
