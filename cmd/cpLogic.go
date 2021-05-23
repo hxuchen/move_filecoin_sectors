@@ -72,7 +72,6 @@ func initializeTaskList(cfg *Config) error {
 	var lastOpDone = make(chan struct{}, 1)
 	var ops = make([]Operation, 0)
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
-		log.Debugf("%v", srcComputersMapSingleton.CMap)
 		for _, src := range srcComputer.Paths {
 			log.Debugf("dealing %s %s", srcComputer.Ip, src)
 			if stop {
@@ -244,7 +243,6 @@ func startWork(cfg *Config) {
 					// get one best dst
 					log.Debugf("start to get best dst fot %v", t.getInfo())
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
-					log.Debugf("got best dst done for %v", t.getInfo())
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
 							t.releaseSrcComputer()
@@ -259,6 +257,7 @@ func startWork(cfg *Config) {
 						t.releaseDstComputer()
 						continue
 					}
+					log.Debugf("got best dst done for %v", t.getInfo())
 					t.setStatus(StatusOnWorking)
 					t.fullInfo(dst, dstIp)
 					go t.startCopy(cfg, dstPathIdxInComp)

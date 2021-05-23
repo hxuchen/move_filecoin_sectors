@@ -100,7 +100,6 @@ func (t *SealedTask) canDo() bool {
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
 		srcComputer.CurrentThreads++
 		srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
-		log.Debug(srcComputersMapSingleton)
 		return true
 	}
 	return false
@@ -118,7 +117,6 @@ func (t *SealedTask) releaseSrcComputer() {
 		srcComputer.CurrentThreads--
 	}
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
-	log.Debug(srcComputersMapSingleton)
 }
 
 func (t *SealedTask) releaseDstComputer() {
@@ -129,12 +127,11 @@ func (t *SealedTask) releaseDstComputer() {
 		dstComputer.CurrentThreads--
 	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
-	log.Debug(dstComputersMapSingleton)
 }
 
 func (t *SealedTask) getStatus() string {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
+	//taskListSingleton.TLock.Lock()
+	//defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 
