@@ -286,7 +286,7 @@ func startWork(cfg *Config) {
 				for _, p := range v.Paths {
 					fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
 				}
-				if v.CurrentThreads == 0 {
+				if ip != "" && v.CurrentThreads == 0 {
 					for _, ov := range taskListSingleton.Ops {
 						info := ov.getInfo()
 						if ov.getStatus() != StatusDone {
