@@ -227,6 +227,7 @@ func startWork(cfg *Config) {
 		log.Error(err)
 		return
 	}
+	since := time.Now()
 	for {
 		allDone := true
 		for _, v := range taskListSingleton.Ops {
@@ -272,47 +273,50 @@ func startWork(cfg *Config) {
 			break
 		}
 		if os.Getenv("SHOW_DETAIL") == "1" {
-			fmt.Println("src computer thread info:")
-			srcComputersMapSingleton.CLock.Lock()
-			for ip, v := range srcComputersMapSingleton.CMap {
-				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
-			}
-			srcComputersMapSingleton.CLock.Unlock()
-
-			fmt.Println("dst computer thread info:")
-			dstComputersMapSingleton.CLock.Lock()
-			for ip, v := range dstComputersMapSingleton.CMap {
-				fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
-				for _, p := range v.Paths {
-					fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
+			if time.Now().Sub(since) > time.Minute*5 {
+				since = time.Now()
+				fmt.Println("src computer thread info:")
+				srcComputersMapSingleton.CLock.Lock()
+				for ip, v := range srcComputersMapSingleton.CMap {
+					fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
 				}
-				if ip != "" && v.CurrentThreads == 0 {
-					for _, ov := range taskListSingleton.Ops {
-						info := ov.getInfo()
-						if ov.getStatus() != StatusDone {
-							switch fileType {
-							case move_common.Sealed:
-								task := info.(SealedTask)
-								if task.DstIp == v.Ip {
-									fmt.Println(task)
-								}
-							case move_common.Cache:
-								task := info.(CacheTask)
-								if task.DstIp == v.Ip {
-									fmt.Println(task)
-								}
-							case move_common.UnSealed:
-								task := info.(UnSealedTask)
-								if task.DstIp == v.Ip {
-									fmt.Println(task)
+				srcComputersMapSingleton.CLock.Unlock()
+
+				fmt.Println("dst computer thread info:")
+				dstComputersMapSingleton.CLock.Lock()
+				for ip, v := range dstComputersMapSingleton.CMap {
+					fmt.Printf("%s: current thread:%d; limit thread:%d \n", ip, v.CurrentThreads, v.LimitThread)
+					for _, p := range v.Paths {
+						fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
+					}
+					if ip != "" && v.CurrentThreads == 0 {
+						for _, ov := range taskListSingleton.Ops {
+							info := ov.getInfo()
+							if ov.getStatus() != StatusDone {
+								switch fileType {
+								case move_common.Sealed:
+									task := info.(SealedTask)
+									if task.DstIp == v.Ip {
+										fmt.Println(task)
+									}
+								case move_common.Cache:
+									task := info.(CacheTask)
+									if task.DstIp == v.Ip {
+										fmt.Println(task)
+									}
+								case move_common.UnSealed:
+									task := info.(UnSealedTask)
+									if task.DstIp == v.Ip {
+										fmt.Println(task)
+									}
 								}
 							}
-						}
 
+						}
 					}
 				}
+				dstComputersMapSingleton.CLock.Unlock()
 			}
-			dstComputersMapSingleton.CLock.Unlock()
 		}
 		time.Sleep(time.Second * 5)
 	}
