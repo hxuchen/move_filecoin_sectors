@@ -150,6 +150,8 @@ var CpCmd = &cli.Command{
 			log.Error(err)
 			return nil
 		}
+		log.Debugf("srcComputersInfo: %v", srcComputersMapSingleton)
+		log.Debugf("dstComputersInfo: %v", dstComputersMapSingleton)
 		stopSignal := make(chan os.Signal, 2)
 		signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
 		go func() {
