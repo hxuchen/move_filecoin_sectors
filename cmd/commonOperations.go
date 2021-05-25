@@ -66,7 +66,7 @@ func getOneFreeDstComputer() (*Computer, error) {
 			return &cmp, nil
 		}
 	}
-	return nil, errors.New("no free dst computers for now")
+	return nil, errors.New(move_common.NoDstSuitableForNow)
 }
 
 func copyDir(srcDir, dst string, cfg *Config) error {
