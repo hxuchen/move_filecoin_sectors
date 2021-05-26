@@ -48,7 +48,7 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 	} else if totalSize >= 146<<20 && totalSize <= 147<<20 {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Warnf("sector file cache size of %s is not 32G or 64G,we can not deal it now", sealedId)
+		log.Warnf("sector file cache size of %s is not 32G or 64G,we can not deal it now", singleCacheSrcDir)
 		return nil, nil
 	}
 	oriSrc = strings.TrimRight(oriSrc, "/")
