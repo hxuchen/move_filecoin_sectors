@@ -80,8 +80,14 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 
 		log.Debugf("sorting dst paths")
 		sort.Slice(dstC.Paths, func(i, j int) bool {
-			iw := big.NewInt(dstC.Paths[i].CurrentThreads)
-			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
+			var statI = new(syscall.Statfs_t)
+			_ = syscall.Statfs(dstC.Paths[i].Location, statI)
+			var statJ = new(syscall.Statfs_t)
+			_ = syscall.Statfs(dstC.Paths[j].Location, statJ)
+
+			iw := big.NewInt(int64(statI.Bavail*uint64(statI.Bsize)) / dstC.Paths[i].CurrentThreads)
+			jw := big.NewInt(int64(statJ.Bavail*uint64(statJ.Bsize)) / dstC.Paths[j].CurrentThreads)
+
 			return iw.GreaterThanEqual(jw)
 		})
 		log.Debugf("selecting dst paths for %s", t.SectorID)
