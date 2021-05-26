@@ -70,7 +70,6 @@ func getOneFreeDstComputer() (*Computer, error) {
 }
 
 func copyDir(srcDir, dst string, cfg *Config) error {
-	log.Info(dst)
 	if err := mv_utils.MakeDirIfNotExists(dst); err != nil {
 		return err
 	}
