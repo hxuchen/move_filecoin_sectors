@@ -42,7 +42,7 @@ func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, erro
 	} else if totalSize >= (68719476736-16<<10) && totalSize <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Warnf("sector file sealed size of %s is not 32G or 64G,we can not deal it now", sealedId)
+		log.Warnf("sector file sealed size of %s is not 32G or 64G,we can not deal it now", sealedSrc)
 		return nil, nil
 	}
 
