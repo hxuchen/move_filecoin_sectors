@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"move_sectors/move_common"
 	"move_sectors/mv_utils"
 	"os"
@@ -40,7 +41,7 @@ type TaskList struct {
 }
 
 type Operation interface {
-	printInfo()
+	getInfo() interface{}
 	canDo() bool
 	getBestDst() (string, string, int, error)
 	startCopy(cfg *Config, dstPathIdxInComp int)
@@ -51,21 +52,21 @@ type Operation interface {
 	fullInfo(dstOri, dstIp string)
 	occupyDstPathThread(idx int, c *Computer)
 	freeDstPathThread(idx int)
-	makeDstPathSliceForCheckIsCopied(oriDst string) ([]string, error)
-	checkIsCopied(cfg *Config) bool
+	checkIsExistedInDst(srcPaths []string, cfg *Config) bool
+	checkSourceSize() ([]string, error)
+	tryToFindGroupDir() (string, string, int, error)
 }
 
 func getOneFreeDstComputer() (*Computer, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-	for _, com := range dstComputersMapSingleton.CMap {
-		if com.CurrentThreads < com.LimitThread {
-			com.CurrentThreads++
-			dstComputersMapSingleton.CMap[com.Ip] = com
-			return &com, nil
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		if cmp.CurrentThreads < cmp.LimitThread {
+			cmp.CurrentThreads++
+			dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+			log.Debug(dstComputersMapSingleton)
+			return &cmp, nil
 		}
 	}
-	return nil, errors.New("no free dst computers for now")
+	return nil, errors.New(move_common.NoDstSuitableForNow)
 }
 
 func copyDir(srcDir, dst string, cfg *Config) error {
@@ -89,25 +90,6 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 }
 
 func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
-	statSrc, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	statDst, err := os.Stat(dst)
-	if err == nil {
-		if statDst.Size() == statSrc.Size() {
-			srcHash, _ := mv_utils.CalFileHash(src, statSrc.Size(), chunks)
-			dstHash, _ := mv_utils.CalFileHash(dst, statDst.Size(), chunks)
-			now := time.Now()
-			if srcHash == dstHash && srcHash != "" && dstHash != "" {
-				if os.Getenv("SHOW_LOG_DETAIL") == "1" {
-					log.Infof("src file: %s already existed in dst %s,CacheSealedTask done,calHash cost %v", src, dst, time.Now().Sub(now))
-				}
-				return nil
-			}
-		}
-	}
-
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 
@@ -172,25 +154,52 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 	return
 }
 
-func checkAndFindCacheSrc(cacheSrcDir, oriSrc string) string {
-	// verify all src files existed, if not existed, find all computers
-	var needFindCacheSrcDir bool
-	if _, errCacheSrcDir := os.Stat(cacheSrcDir); errCacheSrcDir != nil && os.IsNotExist(errCacheSrcDir) {
-		cacheSrcDir = ""
-		needFindCacheSrcDir = true
+func getStandSize(proofType, path string) (int64, error) {
+	var (
+		baseSize  int64
+		treeRSize int64
+		pAuxSize  int64
+	)
+	switch proofType {
+	case ProofType32G:
+		baseSize = 34359738368
+		treeRSize = 9586976
+		pAuxSize = 64
+	case ProofType64G:
+		baseSize = 68719476736
+		treeRSize = 9586976
+		pAuxSize = 64
+	default:
+		return 0, errors.New(fmt.Sprintf("this kind of SealProofType: %d should never existed", proofType))
 	}
-	if needFindCacheSrcDir {
-		var errFind error
-	FindCacheSrcLoopCache:
-		for _, comp := range srcComputersMapSingleton.CMap {
-			for _, singlePath := range comp.Paths {
-				cacheSrcDirTmp := strings.Replace(cacheSrcDir, oriSrc, strings.TrimRight(singlePath.Location, "/"), 1)
-				if _, errFind = os.Stat(cacheSrcDirTmp); errFind == nil {
-					cacheSrcDir = cacheSrcDirTmp
-					break FindCacheSrcLoopCache
-				}
-			}
+
+	if strings.Contains(path, "unsealed") || strings.Contains(path, "sealed") {
+		return baseSize, nil
+	} else if strings.Contains(path, "tree-r") {
+		return treeRSize, nil
+	} else if strings.Contains(path, "p_aux") {
+		return pAuxSize, nil
+	} else {
+		return 0, errors.New(fmt.Sprintf("this kind of path: %s should never existed", path))
+	}
+
+}
+
+func compareSize(path string, base int64, delta int) error {
+	errFormat := "wrong file size,path: %s,required size: %d, got size: %d"
+	if fileStat, err := os.Stat(path); err != nil {
+		return err
+	} else {
+		if math.Abs(float64(fileStat.Size()-base)) > float64(delta) {
+			return errors.New(fmt.Sprintf(errFormat, path, base, fileStat.Size()))
 		}
 	}
-	return cacheSrcDir
+	return nil
+}
+
+func recordCalLogIfNeed(calFunc func(string, int64, int64) (string, error), filePath string, size int64, chunks int64) (string, error) {
+	since := time.Now()
+	s, err := calFunc(filePath, size, chunks)
+	log.Debugf("cal %s calHash cost %v", filePath, time.Now().Sub(since))
+	return s, err
 }

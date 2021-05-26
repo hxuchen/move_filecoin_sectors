@@ -1,7 +1,7 @@
 /**
  _*_ @Author: IronHuang _*_
  _*_ @blog:https://www.dvpos.com/ _*_
- _*_ @Date: 2021/4/27 下午4:49 _*_
+ _*_ @Date: 2021/4/26 上午11:50 _*_
 **/
 
 package main
@@ -18,44 +18,44 @@ import (
 	"time"
 )
 
-type UnSealedTask struct {
+type SealedTask struct {
 	SectorID      string
 	SrcIp         string
 	OriSrc        string
+	SealedSrc     string
 	DstIp         string
-	UnSealedSrc   string
-	UnSealedDst   string
+	SealedDst     string
 	TotalSize     int64
 	Status        string
 	SealProofType string
 }
 
-func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask, error) {
-	var task = new(UnSealedTask)
-	stat, _ := os.Stat(unSealedSrc)
-	if stat.Size() >= (34359738368-16<<10) && stat.Size() <= (34359738368+16<<10) {
+func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, error) {
+	var task = new(SealedTask)
+	oriSrc = strings.TrimRight(oriSrc, "/")
+
+	// check sealed file size is valid or not
+	sealedSrcInfo, _ := os.Stat(sealedSrc)
+	totalSize := sealedSrcInfo.Size()
+	if totalSize >= (34359738368-16<<10) && totalSize <= (34359738368+16<<10) {
 		task.SealProofType = ProofType32G
-	} else if stat.Size() >= (68719476736-16<<10) && stat.Size() <= (68719476736+16<<10) {
+	} else if totalSize >= (68719476736-16<<10) && totalSize <= (68719476736+16<<10) {
 		task.SealProofType = ProofType64G
 	} else {
-		log.Warnf("sealed file %s size not 32G or 64G,we can not deal it now", unSealedSrc)
+		log.Warnf("sector file sealed size of %s is not 32G or 64G,we can not deal it now", sealedSrc)
 		return nil, nil
 	}
 
-	task.SectorID = sectorID
+	task.SectorID = sealedId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
-	task.UnSealedSrc = unSealedSrc
-	task.TotalSize = stat.Size()
+	task.SealedSrc = sealedSrc
+	task.TotalSize = totalSize
 	task.Status = StatusOnWaiting
 	return task, nil
 }
 
-func (t *UnSealedTask) getInfo() interface{} {
-	return *t
-}
-
-func (t *UnSealedTask) getBestDst() (string, string, int, error) {
+func (t *SealedTask) getBestDst() (string, string, int, error) {
 	log.Debugf("finding best dst, %s", t.SectorID)
 
 	dstComputersMapSingleton.CLock.Lock()
@@ -66,7 +66,6 @@ func (t *UnSealedTask) getBestDst() (string, string, int, error) {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
 			return "", "", 0, err
 		}
-
 		dstC, err := getOneFreeDstComputer()
 		if err != nil {
 			return "", "", 0, err
@@ -78,7 +77,6 @@ func (t *UnSealedTask) getBestDst() (string, string, int, error) {
 			jw := big.NewInt(dstC.Paths[j].CurrentThreads)
 			return iw.GreaterThanEqual(jw)
 		})
-
 		log.Debugf("selecting dst paths for %s", t.SectorID)
 		for idx, p := range dstC.Paths {
 			var stat = new(syscall.Statfs_t)
@@ -88,13 +86,14 @@ func (t *UnSealedTask) getBestDst() (string, string, int, error) {
 				return p.Location, dstC.Ip, idx, nil
 			}
 		}
+		log.Debugf("found group path for %s sealed", t.SectorID)
 		return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
 	}
 
 	return dir, s, i, nil
 }
 
-func (t *UnSealedTask) canDo() bool {
+func (t *SealedTask) canDo() bool {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
@@ -106,7 +105,11 @@ func (t *UnSealedTask) canDo() bool {
 	return false
 }
 
-func (t *UnSealedTask) releaseSrcComputer() {
+func (t *SealedTask) getInfo() interface{} {
+	return *t
+}
+
+func (t *SealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
@@ -116,7 +119,7 @@ func (t *UnSealedTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 }
 
-func (t *UnSealedTask) releaseDstComputer() {
+func (t *SealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
@@ -126,29 +129,29 @@ func (t *UnSealedTask) releaseDstComputer() {
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
 }
 
-func (t *UnSealedTask) getStatus() string {
+func (t *SealedTask) getStatus() string {
 	//taskListSingleton.TLock.Lock()
 	//defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 
-func (t *UnSealedTask) setStatus(st string) {
+func (t *SealedTask) setStatus(st string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
 	t.Status = st
 }
 
-func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
+func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start to copying %v", *t)
-	// copying unsealed
-	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	// copying sealed
+	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
 		} else {
 			log.Error(err)
 		}
-		os.Remove(t.UnSealedDst)
+		os.Remove(t.SealedDst)
 		t.setStatus(StatusOnWaiting)
 	} else {
 		t.setStatus(StatusDone)
@@ -157,22 +160,22 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	t.releaseSrcComputer()
 	t.releaseDstComputer()
 	t.freeDstPathThread(dstPathIdxInComp)
-
 }
 
-func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
+func (t *SealedTask) fullInfo(dstOri, dstIp string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
-	t.UnSealedDst = strings.Replace(t.UnSealedSrc, t.OriSrc, dstOri, 1)
+	t.SealedDst = strings.Replace(t.SealedSrc, t.OriSrc, dstOri, 1)
 	t.DstIp = dstIp
 }
 
-func (t *UnSealedTask) occupyDstPathThread(idx int, c *Computer) {
+func (t *SealedTask) occupyDstPathThread(idx int, c *Computer) {
 	c.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[c.Ip] = *c
+	log.Debug(dstComputersMapSingleton)
 }
 
-func (t *UnSealedTask) freeDstPathThread(idx int) {
+func (t *SealedTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
@@ -180,39 +183,40 @@ func (t *UnSealedTask) freeDstPathThread(idx int) {
 		dstComp.Paths[idx].CurrentThreads--
 	}
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
+	log.Debug(dstComputersMapSingleton)
 }
 
-func (t *UnSealedTask) checkSourceSize() ([]string, error) {
+func (t *SealedTask) checkSourceSize() ([]string, error) {
 	var paths = make([]string, 0)
 
-	size, err := getStandSize(t.SealProofType, t.UnSealedSrc)
+	size, err := getStandSize(t.SealProofType, t.SealedSrc)
 	if err != nil {
 		return paths, err
 	}
-	err = compareSize(t.UnSealedSrc, size, 16<<10)
+	err = compareSize(t.SealedSrc, size, 16<<10)
 	if err != nil {
 		return paths, err
 	}
 
-	paths = append(paths, t.UnSealedSrc)
+	paths = append(paths, t.SealedSrc)
 	return paths, nil
 }
 
-func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
+func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	sinceTime := time.Now()
 	for _, v := range dstComputersMapSingleton.CMap {
 		for _, p := range v.Paths {
 			tag := 1
-			for _, singleUnSealedPath := range srcPaths {
-				dst := strings.Replace(singleUnSealedPath, t.OriSrc, p.Location, 1)
-				statSrc, _ := os.Stat(singleUnSealedPath)
+			for _, singleSealedPath := range srcPaths {
+				dst := strings.Replace(singleSealedPath, t.OriSrc, p.Location, 1)
+				statSrc, _ := os.Stat(singleSealedPath)
 				statDst, err := os.Stat(dst)
 				// if existed,check hash
 				if err == nil {
 					if statDst.Size() == statSrc.Size() {
-						srcHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, singleUnSealedPath, statSrc.Size(), cfg.Chunks)
+						srcHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, singleSealedPath, statSrc.Size(), cfg.Chunks)
 						dstHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, dst, statDst.Size(), cfg.Chunks)
 						if srcHash == dstHash && srcHash != "" && dstHash != "" {
 							tag = tag * 1
@@ -225,7 +229,7 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 				}
 			}
 			if tag == 1 {
-				log.Debugf("src unsealed file: %v already existed in dst %s,unSealedTask done,check cost %v",
+				log.Debugf("src sealed file: %v already existed in dst %s,SealedTask done,check cost %v",
 					*t, p.Location, time.Now().Sub(sinceTime))
 				log.Debugf("task %v is existed in dst", *t)
 				return true
@@ -235,36 +239,9 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 	return false
 }
 
-func (t *UnSealedTask) tryToFindGroupDir() (string, string, int, error) {
-	log.Debugf("trying to find group dir for %s unsealed", t.SectorID)
-	// search sealed at first
-	for _, cmp := range dstComputersMapSingleton.CMap {
-		for idx, p := range cmp.Paths {
-			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
-			_, err := os.Stat(dstSealed)
-			if err == nil {
-				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
-
-					var stat = new(syscall.Statfs_t)
-					_ = syscall.Statfs(p.Location, stat)
-					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
-						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
-						return "", "", 0, errors.New(move_common.NotEnoughSpace)
-					}
-
-					t.occupyDstPathThread(idx, &cmp)
-					cmp.CurrentThreads++
-					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
-					return p.Location, cmp.Ip, idx, nil
-				} else {
-					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
-					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
-				}
-			}
-		}
-	}
-
-	// search cache
+func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
+	log.Debugf("trying to find group dir for %s sealed", t.SectorID)
+	// search cache at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for idx, p := range cmp.Paths {
 			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
@@ -282,9 +259,37 @@ func (t *UnSealedTask) tryToFindGroupDir() (string, string, int, error) {
 					t.occupyDstPathThread(idx, &cmp)
 					cmp.CurrentThreads++
 					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+					log.Debug(dstComputersMapSingleton)
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
+					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
+				}
+			}
+		}
+	}
+
+	// search unSealed
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		for idx, p := range cmp.Paths {
+			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.SectorID
+			_, err := os.Stat(dstUnSealed)
+			if err == nil {
+				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+
+					var stat = new(syscall.Statfs_t)
+					_ = syscall.Statfs(p.Location, stat)
+					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
+						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
+						return "", "", 0, errors.New(move_common.NotEnoughSpace)
+					}
+
+					t.occupyDstPathThread(idx, &cmp)
+					cmp.CurrentThreads++
+					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
+					return p.Location, cmp.Ip, idx, nil
+				} else {
+					log.Infof("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
 					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
 				}
 			}
