@@ -172,7 +172,7 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
-	t.UnSealedDst = strings.Replace(t.UnSealedSrc, t.OriSrc, dstOri, 1)
+	t.UnSealedDst = strings.Replace(t.UnSealedSrc, t.OriSrc, strings.TrimRight(dstOri, "/"), 1)
 	t.DstIp = dstIp
 }
 

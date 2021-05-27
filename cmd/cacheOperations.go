@@ -178,7 +178,7 @@ func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 func (t *CacheTask) fullInfo(dstOri, dstIp string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
-	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, dstOri, 1)
+	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, strings.TrimRight(dstOri, "/"), 1)
 	t.DstIp = dstIp
 }
 
