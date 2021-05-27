@@ -324,16 +324,14 @@ func startWork(cfg *Config) {
 
 func waitingForAllTaskStop() {
 	log.Info("waiting all tasks stop to exit process")
-	allStop := true
 	for {
 		num := 0
 		for _, t := range taskListSingleton.Ops {
 			if t.getStatus() == StatusOnWorking {
 				num++
-				allStop = false
 			}
 		}
-		if allStop {
+		if num == 0 {
 			log.Info("all tasks stopped")
 			break
 		}

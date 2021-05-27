@@ -32,6 +32,8 @@ type UnSealedTask struct {
 
 func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask, error) {
 	var task = new(UnSealedTask)
+	oriSrc = strings.TrimRight(oriSrc, "/")
+
 	stat, _ := os.Stat(unSealedSrc)
 	if stat.Size() >= (34359738368-16<<10) && stat.Size() <= (34359738368+16<<10) {
 		task.SealProofType = ProofType32G
