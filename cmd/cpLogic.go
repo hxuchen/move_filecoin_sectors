@@ -326,8 +326,10 @@ func waitingForAllTaskStop() {
 	log.Info("waiting all tasks stop to exit process")
 	allStop := true
 	for {
+		num := 0
 		for _, t := range taskListSingleton.Ops {
 			if t.getStatus() == StatusOnWorking {
+				num++
 				allStop = false
 			}
 		}
@@ -335,6 +337,7 @@ func waitingForAllTaskStop() {
 			log.Info("all tasks stopped")
 			break
 		}
+		log.Infof("on working tasks remain %d", num)
 		time.Sleep(time.Second)
 	}
 }
