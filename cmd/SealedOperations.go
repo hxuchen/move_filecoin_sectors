@@ -79,8 +79,8 @@ func (t *SealedTask) getBestDst() (string, string, int, error) {
 			var statJ = new(syscall.Statfs_t)
 			_ = syscall.Statfs(dstC.Paths[j].Location, statJ)
 
-			iw := big.NewInt(int64(statI.Bavail*uint64(statI.Bsize)) / dstC.Paths[i].CurrentThreads)
-			jw := big.NewInt(int64(statJ.Bavail*uint64(statJ.Bsize)) / dstC.Paths[j].CurrentThreads)
+			iw := big.NewInt(int64(statI.Bavail*uint64(statI.Bsize)) / (dstC.Paths[i].CurrentThreads + 1))
+			jw := big.NewInt(int64(statJ.Bavail*uint64(statJ.Bsize)) / (dstC.Paths[j].CurrentThreads + 1))
 
 			return iw.GreaterThanEqual(jw)
 		})
