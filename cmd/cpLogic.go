@@ -228,7 +228,7 @@ func startWork(cfg *Config) {
 	}
 	since := time.Now()
 	for {
-		allDone := true
+		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
 			t := v
 			if stop {
@@ -238,7 +238,7 @@ func startWork(cfg *Config) {
 			}
 			switch t.getStatus() {
 			case StatusOnWaiting:
-				allDone = false
+				NotDoneNum++
 				if t.canDo() {
 					// get one best dst
 					log.Debugf("start to get best dst fot %v", t.getInfo())
@@ -263,12 +263,12 @@ func startWork(cfg *Config) {
 					go t.startCopy(cfg, dstPathIdxInComp)
 				}
 			case StatusOnWorking:
-				allDone = false
+				NotDoneNum++
 			case StatusDone:
 			}
 		}
 
-		if allDone {
+		if NotDoneNum == 0 {
 			break
 		}
 		if os.Getenv("SHOW_DETAIL") == "1" {

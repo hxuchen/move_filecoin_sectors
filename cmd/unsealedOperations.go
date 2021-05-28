@@ -151,6 +151,9 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start to copying %v", *t)
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	t.releaseSrcComputer()
+	t.releaseDstComputer()
+	t.freeDstPathThread(dstPathIdxInComp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -163,10 +166,6 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.setStatus(StatusDone)
 		log.Infof("task %v done", *t)
 	}
-	t.releaseSrcComputer()
-	t.releaseDstComputer()
-	t.freeDstPathThread(dstPathIdxInComp)
-
 }
 
 func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {

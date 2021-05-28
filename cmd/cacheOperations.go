@@ -157,6 +157,9 @@ func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	log.Infof("start to copying %v", *t)
 	// copying cache
 	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
+	t.releaseSrcComputer()
+	t.releaseDstComputer()
+	t.freeDstPathThread(dstPathIdxInComp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -169,10 +172,6 @@ func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 		t.setStatus(StatusDone)
 		log.Infof("task %v done", *t)
 	}
-	t.releaseSrcComputer()
-	t.releaseDstComputer()
-	t.freeDstPathThread(dstPathIdxInComp)
-
 }
 
 func (t *CacheTask) fullInfo(dstOri, dstIp string) {
