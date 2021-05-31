@@ -208,7 +208,7 @@ func releaseSrcComputer(srcIp string) {
 	}
 	srcComputer.CurrentThreads--
 	srcComputersMapSingleton.CMap[srcIp] = srcComputer
-	log.Debugf("releaseSrcComputer:before %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
+	log.Debugf("releaseSrcComputer:after %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
 }
 
 func occupySrcComputer(srcIp string) {
@@ -218,7 +218,7 @@ func occupySrcComputer(srcIp string) {
 	log.Debugf("occupySrcComputer:before %d,ip %s", srcComputer.CurrentThreads, srcIp)
 	srcComputer.CurrentThreads++
 	srcComputersMapSingleton.CMap[srcIp] = srcComputer
-	log.Debugf("occupySrcComputer:before %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
+	log.Debugf("occupySrcComputer:after %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
 }
 
 func releaseDstComputer(dstIp string) {
@@ -231,7 +231,7 @@ func releaseDstComputer(dstIp string) {
 	}
 	dstComputer.CurrentThreads--
 	dstComputersMapSingleton.CMap[dstIp] = dstComputer
-	log.Debugf("releaseDstComputer:before %d,ip %s", dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
+	log.Debugf("releaseDstComputer:after %d,ip %s", dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
 }
 
 func occupyDstComputer(dstIp string) {
@@ -241,28 +241,28 @@ func occupyDstComputer(dstIp string) {
 	log.Debugf("occupyDstComputer:before %d,ip %s", dstComputer.CurrentThreads, dstIp)
 	dstComputer.CurrentThreads++
 	dstComputersMapSingleton.CMap[dstIp] = dstComputer
-	log.Debugf("occupyDstComputer:before %d,ip %s", dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
+	log.Debugf("occupyDstComputer:after %d,ip %s", dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
 }
 
 func occupyDstPathThread(idx int, dstIp string) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[dstIp]
-	log.Debugf("occupyDstPathThread:before %d,ip %s", dstComp.Paths[idx].CurrentThreads, dstIp)
+	log.Debugf("occupyDstPathThread:before %d,ip %s,path %s", dstComp.Paths[idx].CurrentThreads, dstIp, dstComputersMapSingleton.CMap[dstIp].Paths[idx])
 	dstComp.Paths[idx].CurrentThreads++
 	dstComputersMapSingleton.CMap[dstIp] = dstComp
-	log.Debugf("occupyDstPathThread:after %d,ip %s", dstComputersMapSingleton.CMap[dstIp].Paths[idx].CurrentThreads, dstIp)
+	log.Debugf("occupyDstPathThread:after %d,ip %s,path %s", dstComputersMapSingleton.CMap[dstIp].Paths[idx].CurrentThreads, dstIp, dstComputersMapSingleton.CMap[dstIp].Paths[idx])
 }
 
 func freeDstPathThread(idx int, dstIp string) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[dstIp]
-	log.Debugf("freeDstPathThread:before %d,ip %s", dstComp.Paths[idx].CurrentThreads, dstIp)
+	log.Debugf("freeDstPathThread:before %d,ip %s,path %s", dstComp.Paths[idx].CurrentThreads, dstIp, dstComputersMapSingleton.CMap[dstIp].Paths[idx])
 	if dstComp.Paths[idx].CurrentThreads < 0 {
 		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComp.Paths[idx].CurrentThreads)
 	}
 	dstComp.Paths[idx].CurrentThreads--
 	dstComputersMapSingleton.CMap[dstIp] = dstComp
-	log.Debugf("freeDstPathThread:after %d,ip %s", dstComputersMapSingleton.CMap[dstIp].Paths[idx].CurrentThreads, dstIp)
+	log.Debugf("freeDstPathThread:after %d,ip %s,path %s", dstComputersMapSingleton.CMap[dstIp].Paths[idx].CurrentThreads, dstIp, dstComputersMapSingleton.CMap[dstIp].Paths[idx])
 }
