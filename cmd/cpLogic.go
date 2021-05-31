@@ -321,11 +321,13 @@ func waitingForAllTaskStop() {
 	log.Info("waiting all tasks stop to exit process")
 	for {
 		num := 0
+		taskListSingleton.TLock.Lock()
 		for _, t := range taskListSingleton.Ops {
 			if t.getStatus() == StatusOnWorking {
 				num++
 			}
 		}
+		taskListSingleton.TLock.Unlock()
 		if num == 0 {
 			log.Info("all tasks stopped")
 			break
