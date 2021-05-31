@@ -95,7 +95,6 @@ func (t *CacheTask) getBestDst() (string, string, int, error) {
 			var stat = new(syscall.Statfs_t)
 			_ = syscall.Statfs(p.Location, stat)
 			if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
-				t.occupyDstPathThread(idx, dstC)
 				return p.Location, dstC.Ip, idx, nil
 			}
 		}
@@ -110,42 +109,20 @@ func (t *CacheTask) canDo() bool {
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
 	if srcComputer.CurrentThreads < srcComputer.LimitThread {
-		srcComputer.CurrentThreads++
-		srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 		return true
 	}
 	return false
 }
 
 func (t *CacheTask) getInfo() interface{} {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
 	return *t
 }
 
-func (t *CacheTask) releaseSrcComputer() {
-	srcComputersMapSingleton.CLock.Lock()
-	defer srcComputersMapSingleton.CLock.Unlock()
-	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
-	if srcComputer.CurrentThreads < 0 {
-		log.Errorf("wrong thread num,required num is bigger than 0,but %d", srcComputer.CurrentThreads)
-	}
-	srcComputer.CurrentThreads--
-	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
-}
-
-func (t *CacheTask) releaseDstComputer() {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
-	if dstComputer.CurrentThreads < 0 {
-		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComputer.CurrentThreads)
-	}
-	dstComputer.CurrentThreads--
-	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
-}
-
 func (t *CacheTask) getStatus() string {
-	//taskListSingleton.TLock.Lock()
-	//defer taskListSingleton.TLock.Unlock()
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
 	return t.Status
 }
 
@@ -156,12 +133,15 @@ func (t *CacheTask) setStatus(st string) {
 }
 
 func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
+	occupySrcComputer(t.SrcIp)
+	occupySrcComputer(t.DstIp)
+	occupyDstPathThread(dstPathIdxInComp, t.DstIp)
 	log.Infof("start to copying %v", *t)
 	// copying cache
 	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
-	t.releaseSrcComputer()
-	t.releaseDstComputer()
-	t.freeDstPathThread(dstPathIdxInComp)
+	releaseSrcComputer(t.SrcIp)
+	releaseDstComputer(t.DstIp)
+	freeDstPathThread(dstPathIdxInComp, t.DstIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -181,22 +161,6 @@ func (t *CacheTask) fullInfo(dstOri, dstIp string) {
 	defer taskListSingleton.TLock.Unlock()
 	t.CacheDstDir = strings.Replace(t.CacheSrcDir, t.OriSrc, strings.TrimRight(dstOri, "/"), 1)
 	t.DstIp = dstIp
-}
-
-func (t *CacheTask) occupyDstPathThread(idx int, c *Computer) {
-	c.Paths[idx].CurrentThreads++
-	dstComputersMapSingleton.CMap[c.Ip] = *c
-}
-
-func (t *CacheTask) freeDstPathThread(idx int) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
-	if dstComp.Paths[idx].CurrentThreads < 0 {
-		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComp.Paths[idx].CurrentThreads)
-	}
-	dstComp.Paths[idx].CurrentThreads--
-	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
 }
 
 func (t *CacheTask) makeSrcPathSliceForCache() ([]string, error) {
@@ -292,6 +256,8 @@ func (t *CacheTask) checkSourceSize() ([]string, error) {
 }
 
 func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
 	log.Debugf("finding group dst, %s", t.SectorID)
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
@@ -307,10 +273,6 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
 						return "", "", 0, errors.New(move_common.NotEnoughSpace)
 					}
-
-					t.occupyDstPathThread(idx, &cmp)
-					cmp.CurrentThreads++
-					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Debugf("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
@@ -334,10 +296,6 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
 						return "", "", 0, errors.New(move_common.NotEnoughSpace)
 					}
-
-					t.occupyDstPathThread(idx, &cmp)
-					cmp.CurrentThreads++
-					dstComputersMapSingleton.CMap[cmp.Ip] = cmp
 					return p.Location, cmp.Ip, idx, nil
 				} else {
 					log.Infof("%v found same group dir on %s, but too much threads for now, will copy later", *t, p.Location)

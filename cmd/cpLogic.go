@@ -245,16 +245,12 @@ func startWork(cfg *Config) {
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
-							t.releaseSrcComputer()
-							t.releaseDstComputer()
 							continue
 						} else if err.Error() == move_common.NoDstSuitableForNow {
 							log.Debug(err.Error())
 						} else {
 							log.Warn(err)
 						}
-						t.releaseSrcComputer()
-						t.releaseDstComputer()
 						continue
 					}
 					log.Debugf("got best dst done for %v", t.getInfo())
