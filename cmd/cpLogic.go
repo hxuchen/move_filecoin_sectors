@@ -229,7 +229,6 @@ func startWork(cfg *Config) {
 	since := time.Now()
 	for {
 		NotDoneNum := 0
-		taskListSingleton.TLock.Lock()
 		for _, v := range taskListSingleton.Ops {
 			t := v
 			if stop {
@@ -268,7 +267,6 @@ func startWork(cfg *Config) {
 			case StatusDone:
 			}
 		}
-		taskListSingleton.TLock.Unlock()
 		if NotDoneNum == 0 {
 			break
 		}
@@ -290,7 +288,6 @@ func startWork(cfg *Config) {
 						fmt.Printf("path: %s,current thread:%d; limit thread:%d \n", p.Location, p.CurrentThreads, p.SinglePathThreadLimit)
 					}
 					if ip != "" && v.CurrentThreads == 0 {
-						taskListSingleton.TLock.Lock()
 						for _, ov := range taskListSingleton.Ops {
 							info := ov.getInfo()
 							if ov.getStatus() != StatusDone {
@@ -314,7 +311,6 @@ func startWork(cfg *Config) {
 							}
 
 						}
-						taskListSingleton.TLock.Unlock()
 					}
 				}
 				dstComputersMapSingleton.CLock.Unlock()
@@ -329,13 +325,11 @@ func waitingForAllTaskStop() {
 	log.Info("waiting all tasks stop to exit process")
 	for {
 		num := 0
-		taskListSingleton.TLock.Lock()
 		for _, t := range taskListSingleton.Ops {
 			if t.getStatus() == StatusOnWorking {
 				num++
 			}
 		}
-		taskListSingleton.TLock.Unlock()
 		if num == 0 {
 			log.Info("all tasks stopped")
 			break
