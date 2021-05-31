@@ -125,9 +125,10 @@ func (t *CacheTask) releaseSrcComputer() {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
-	if srcComputer.CurrentThreads > 0 {
-		srcComputer.CurrentThreads--
+	if srcComputer.CurrentThreads < 0 {
+		log.Errorf("wrong thread num,required num is bigger than 0,but %d", srcComputer.CurrentThreads)
 	}
+	srcComputer.CurrentThreads--
 	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
 }
 
@@ -135,9 +136,10 @@ func (t *CacheTask) releaseDstComputer() {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
-	if dstComputer.CurrentThreads > 0 {
-		dstComputer.CurrentThreads--
+	if dstComputer.CurrentThreads < 0 {
+		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComputer.CurrentThreads)
 	}
+	dstComputer.CurrentThreads--
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
 }
 
@@ -190,9 +192,10 @@ func (t *CacheTask) freeDstPathThread(idx int) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	dstComp := dstComputersMapSingleton.CMap[t.DstIp]
-	if dstComp.Paths[idx].CurrentThreads > 0 {
-		dstComp.Paths[idx].CurrentThreads--
+	if dstComp.Paths[idx].CurrentThreads < 0 {
+		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComp.Paths[idx].CurrentThreads)
 	}
+	dstComp.Paths[idx].CurrentThreads--
 	dstComputersMapSingleton.CMap[t.DstIp] = dstComp
 }
 
