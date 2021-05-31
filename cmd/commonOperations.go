@@ -294,6 +294,9 @@ func occupyThreads(dstPathIdx int, dstIp, srcIp string) {
 	log.Debugf("occupyDstPathThread:after %d,ip %s,path %s",
 		dstComputersMapSingleton.CMap[dstIp].Paths[dstPathIdx].CurrentThreads,
 		dstIp, dstComputersMapSingleton.CMap[dstIp].Paths[dstPathIdx].Location)
+
+	srcComputersMapSingleton.CLock.Unlock()
+	dstComputersMapSingleton.CLock.Unlock()
 }
 
 func freeThreads(dstPathIdx int, dstIp, srcIp string) {
@@ -335,5 +338,8 @@ func freeThreads(dstPathIdx int, dstIp, srcIp string) {
 		dstComputersMapSingleton.CMap[dstIp].Paths[dstPathIdx].CurrentThreads,
 		dstIp,
 		dstComputersMapSingleton.CMap[dstIp].Paths[dstPathIdx].Location)
+
+	srcComputersMapSingleton.CLock.Unlock()
+	dstComputersMapSingleton.CLock.Unlock()
 
 }
