@@ -112,6 +112,12 @@ func (t *SealedTask) getInfo() interface{} {
 	return *t
 }
 
+func (t *SealedTask) getSrcIp() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.SrcIp
+}
+
 func (t *SealedTask) getStatus() string {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
@@ -125,15 +131,10 @@ func (t *SealedTask) setStatus(st string) {
 }
 
 func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	occupySrcComputer(t.SrcIp)
-	occupyDstComputer(t.DstIp)
-	occupyDstPathThread(dstPathIdxInComp, t.DstIp)
 	log.Infof("start to copying %v", *t)
 	// copying sealed
 	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
-	releaseSrcComputer(t.SrcIp)
-	releaseDstComputer(t.DstIp)
-	freeDstPathThread(dstPathIdxInComp, t.DstIp)
+	freeThreads(dstPathIdxInComp, t.DstIp, t.SrcIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -219,7 +220,6 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, int, error) {
 			_, err := os.Stat(dstCache)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
-
 					var stat = new(syscall.Statfs_t)
 					_ = syscall.Statfs(p.Location, stat)
 					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {

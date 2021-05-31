@@ -249,6 +249,8 @@ func startWork(cfg *Config) {
 					}
 					t.setStatus(StatusOnWorking)
 					t.fullInfo(dst, dstIp)
+					srcIp := t.getSrcIp()
+					occupyThreads(dstPathIdxInComp, dstIp, srcIp)
 					go t.startCopy(cfg, dstPathIdxInComp)
 				}
 			case StatusOnWorking:

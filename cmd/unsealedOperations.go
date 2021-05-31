@@ -139,6 +139,12 @@ func (t *UnSealedTask) getStatus() string {
 	return t.Status
 }
 
+func (t *UnSealedTask) getSrcIp() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.SrcIp
+}
+
 func (t *UnSealedTask) setStatus(st string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
@@ -146,15 +152,10 @@ func (t *UnSealedTask) setStatus(st string) {
 }
 
 func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	occupySrcComputer(t.SrcIp)
-	occupySrcComputer(t.DstIp)
-	occupyDstPathThread(dstPathIdxInComp, t.DstIp)
 	log.Infof("start to copying %v", *t)
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
-	releaseSrcComputer(t.SrcIp)
-	releaseDstComputer(t.DstIp)
-	freeDstPathThread(dstPathIdxInComp, t.DstIp)
+	freeThreads(dstPathIdxInComp, t.DstIp, t.SrcIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)

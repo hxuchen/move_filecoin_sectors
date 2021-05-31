@@ -133,15 +133,10 @@ func (t *CacheTask) setStatus(st string) {
 }
 
 func (t *CacheTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	occupySrcComputer(t.SrcIp)
-	occupySrcComputer(t.DstIp)
-	occupyDstPathThread(dstPathIdxInComp, t.DstIp)
 	log.Infof("start to copying %v", *t)
 	// copying cache
 	err := copyDir(t.CacheSrcDir, t.CacheDstDir, cfg)
-	releaseSrcComputer(t.SrcIp)
-	releaseDstComputer(t.DstIp)
-	freeDstPathThread(dstPathIdxInComp, t.DstIp)
+	freeThreads(dstPathIdxInComp, t.DstIp, t.SrcIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -306,4 +301,10 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, int, error) {
 	}
 
 	return "", "", 0, errors.New("no same group dir")
+}
+
+func (t *CacheTask) getSrcIp() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.SrcIp
 }
