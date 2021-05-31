@@ -73,7 +73,6 @@ func initializeTaskList(cfg *Config) error {
 	var ops = make([]Operation, 0)
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		for _, src := range srcComputer.Paths {
-			log.Debugf("dealing %s %s", srcComputer.Ip, src)
 			if stop {
 				return errors.New("stopped by signal")
 			}
@@ -174,7 +173,6 @@ func initializeTaskList(cfg *Config) error {
 			idx := i
 			op := v
 			// checkSourceSize
-			log.Debugf("check source size of %v", op.getInfo())
 			srcPaths, err := op.checkSourceSize()
 			if err != nil {
 				if skipSourceError {
@@ -190,12 +188,10 @@ func initializeTaskList(cfg *Config) error {
 					defer func() {
 						<-threadChan
 						if idx == lenOps-1 {
-							log.Debugf("last op check done,idx is %d,task is %v", idx, op.getInfo())
 							lastOpDone <- struct{}{}
 						}
 					}()
 					// check is already existed in dst
-					log.Debugf("check file is already existed", op.getInfo())
 					if op.checkIsExistedInDst(srcPaths, cfg) {
 						return
 					}
@@ -205,7 +201,6 @@ func initializeTaskList(cfg *Config) error {
 					taskListSingleton.Ops = append(taskListSingleton.Ops, op)
 					taskListSingleton.TLock.Unlock()
 
-					log.Debugf("task %v init done", op.getInfo())
 				}()
 			}
 		}
@@ -241,7 +236,6 @@ func startWork(cfg *Config) {
 				NotDoneNum++
 				if t.canDo() {
 					// get one best dst
-					log.Debugf("start to get best dst fot %v", t.getInfo())
 					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
@@ -253,7 +247,6 @@ func startWork(cfg *Config) {
 						}
 						continue
 					}
-					log.Debugf("got best dst done for %v", t.getInfo())
 					t.setStatus(StatusOnWorking)
 					t.fullInfo(dst, dstIp)
 					go t.startCopy(cfg, dstPathIdxInComp)
