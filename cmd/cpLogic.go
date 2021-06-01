@@ -236,7 +236,7 @@ func startWork(cfg *Config) {
 				NotDoneNum++
 				if t.canDo() {
 					// get one best dst
-					dst, dstIp, dstPathIdxInComp, err := t.getBestDst()
+					dst, dstIp, err := t.getBestDst()
 					if err != nil {
 						if err.Error() == move_common.FondGroupButTooMuchThread {
 							continue
@@ -249,9 +249,9 @@ func startWork(cfg *Config) {
 					}
 					t.fullInfo(dst, dstIp)
 					srcIp := t.getSrcIp()
-					occupyThreads(dstPathIdxInComp, dstIp, srcIp)
+					occupyThreads(dst, dstIp, srcIp)
 					t.setStatus(StatusOnWorking)
-					go t.startCopy(cfg, dstPathIdxInComp)
+					go t.startCopy(cfg, dst)
 				}
 			case StatusOnWorking:
 				NotDoneNum++

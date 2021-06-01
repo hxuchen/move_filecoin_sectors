@@ -53,54 +53,6 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask
 	return task, nil
 }
 
-func (t *UnSealedTask) getInfo() interface{} {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
-	return *t
-}
-
-func (t *UnSealedTask) getBestDst() (string, string, int, error) {
-	log.Debugf("finding best dst, %s", t.SectorID)
-
-	dir, s, i, err := t.tryToFindGroupDir()
-	if err != nil {
-		if err.Error() == move_common.FondGroupButTooMuchThread {
-			return "", "", 0, err
-		}
-
-		dstC, err := getOneFreeDstComputer()
-		if err != nil {
-			return "", "", 0, err
-		}
-
-		log.Debugf("sorting dst paths")
-		sort.Slice(dstC.Paths, func(i, j int) bool {
-
-			var statI = new(syscall.Statfs_t)
-			_ = syscall.Statfs(dstC.Paths[i].Location, statI)
-			var statJ = new(syscall.Statfs_t)
-			_ = syscall.Statfs(dstC.Paths[j].Location, statJ)
-
-			iw := big.NewInt(int64(statI.Bavail*uint64(statI.Bsize)) / (dstC.Paths[i].CurrentThreads + 1))
-			jw := big.NewInt(int64(statJ.Bavail*uint64(statJ.Bsize)) / (dstC.Paths[j].CurrentThreads + 1))
-
-			return iw.GreaterThanEqual(jw)
-		})
-
-		log.Debugf("selecting dst paths for %s", t.SectorID)
-		for idx, p := range dstC.Paths {
-			var stat = new(syscall.Statfs_t)
-			_ = syscall.Statfs(p.Location, stat)
-			if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
-				return p.Location, dstC.Ip, idx, nil
-			}
-		}
-		return "", "", 0, errors.New(move_common.NoDstSuitableForNow)
-	}
-
-	return dir, s, i, nil
-}
-
 func (t *UnSealedTask) canDo() bool {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
@@ -111,51 +63,60 @@ func (t *UnSealedTask) canDo() bool {
 	return false
 }
 
-func (t *UnSealedTask) releaseSrcComputer() {
-	srcComputersMapSingleton.CLock.Lock()
-	defer srcComputersMapSingleton.CLock.Unlock()
-	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
-	if srcComputer.CurrentThreads < 0 {
-		log.Errorf("wrong thread num,required num is bigger than 0,but %d", srcComputer.CurrentThreads)
+func (t *UnSealedTask) getBestDst() (string, string, error) {
+	log.Debugf("finding best dst, %s", t.SectorID)
+
+	dir, s, err := t.tryToFindGroupDir()
+	if err != nil {
+		if err.Error() == move_common.FondGroupButTooMuchThread {
+			return "", "", err
+		}
+
+		dstC, err := getOneFreeDstComputer()
+		if err != nil {
+			return "", "", err
+		}
+
+		log.Debugf("sorting dst paths")
+		paths := dstC.Paths
+		sort.Slice(dstC.Paths, func(i, j int) bool {
+			var statI = new(syscall.Statfs_t)
+			_ = syscall.Statfs(paths[i].Location, statI)
+			var statJ = new(syscall.Statfs_t)
+			_ = syscall.Statfs(paths[j].Location, statJ)
+
+			iw := big.NewInt(int64(statI.Bavail*uint64(statI.Bsize)) / (paths[i].CurrentThreads + 1))
+			jw := big.NewInt(int64(statJ.Bavail*uint64(statJ.Bsize)) / (paths[j].CurrentThreads + 1))
+
+			return iw.GreaterThanEqual(jw)
+		})
+
+		log.Debugf("selecting dst paths for %s", t.SectorID)
+		for _, p := range paths {
+			var stat = new(syscall.Statfs_t)
+			_ = syscall.Statfs(p.Location, stat)
+			if stat.Bavail*uint64(stat.Bsize) > uint64(t.TotalSize) && p.CurrentThreads < p.SinglePathThreadLimit {
+				return p.Location, dstC.Ip, nil
+			}
+		}
+		return "", "", errors.New(move_common.NoDstSuitableForNow)
 	}
-	srcComputer.CurrentThreads--
-	srcComputersMapSingleton.CMap[t.SrcIp] = srcComputer
+
+	return dir, s, nil
 }
 
-func (t *UnSealedTask) releaseDstComputer() {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-	dstComputer := dstComputersMapSingleton.CMap[t.DstIp]
-	if dstComputer.CurrentThreads < 0 {
-		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComputer.CurrentThreads)
-	}
-	dstComputer.CurrentThreads--
-	dstComputersMapSingleton.CMap[t.DstIp] = dstComputer
-}
-
-func (t *UnSealedTask) getStatus() string {
+func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
-	return t.Status
+	t.UnSealedDst = strings.Replace(t.UnSealedSrc, t.OriSrc, strings.TrimRight(dstOri, "/"), 1)
+	t.DstIp = dstIp
 }
 
-func (t *UnSealedTask) getSrcIp() string {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
-	return t.SrcIp
-}
-
-func (t *UnSealedTask) setStatus(st string) {
-	taskListSingleton.TLock.Lock()
-	defer taskListSingleton.TLock.Unlock()
-	t.Status = st
-}
-
-func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
+func (t *UnSealedTask) startCopy(cfg *Config, dstPath string) {
 	log.Infof("start to copying %v", *t)
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
-	freeThreads(dstPathIdxInComp, t.DstIp, t.SrcIp)
+	freeThreads(dstPath, t.DstIp, t.SrcIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -170,11 +131,81 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
 	}
 }
 
-func (t *UnSealedTask) fullInfo(dstOri, dstIp string) {
+func (t *UnSealedTask) tryToFindGroupDir() (string, string, error) {
+	dstComputersMapSingleton.CLock.Lock()
+	defer dstComputersMapSingleton.CLock.Unlock()
+	log.Debugf("trying to find group dir for %s unsealed", t.SectorID)
+	// search sealed at first
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		for _, p := range cmp.Paths {
+			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
+			_, err := os.Stat(dstSealed)
+			if err == nil {
+				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+
+					var stat = new(syscall.Statfs_t)
+					_ = syscall.Statfs(p.Location, stat)
+					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
+						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
+						return "", "", errors.New(move_common.NotEnoughSpace)
+					}
+					return p.Location, cmp.Ip, nil
+				} else {
+					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
+					return "", "", errors.New(move_common.FondGroupButTooMuchThread)
+				}
+			}
+		}
+	}
+
+	// search cache
+	for _, cmp := range dstComputersMapSingleton.CMap {
+		for _, p := range cmp.Paths {
+			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
+			_, err := os.Stat(dstCache)
+			if err == nil {
+				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
+
+					var stat = new(syscall.Statfs_t)
+					_ = syscall.Statfs(p.Location, stat)
+					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
+						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
+						return "", "", errors.New(move_common.NotEnoughSpace)
+					}
+					return p.Location, cmp.Ip, nil
+				} else {
+					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
+					return "", "", errors.New(move_common.FondGroupButTooMuchThread)
+				}
+			}
+		}
+	}
+
+	return "", "", errors.New("no same group dir")
+}
+
+func (t *UnSealedTask) getInfo() interface{} {
 	taskListSingleton.TLock.Lock()
 	defer taskListSingleton.TLock.Unlock()
-	t.UnSealedDst = strings.Replace(t.UnSealedSrc, t.OriSrc, strings.TrimRight(dstOri, "/"), 1)
-	t.DstIp = dstIp
+	return *t
+}
+
+func (t *UnSealedTask) getStatus() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.Status
+}
+
+func (t *UnSealedTask) setStatus(st string) {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	t.Status = st
+}
+
+func (t *UnSealedTask) getSrcIp() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.SrcIp
 }
 
 func (t *UnSealedTask) checkSourceSize() ([]string, error) {
@@ -228,57 +259,4 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 		}
 	}
 	return false
-}
-
-func (t *UnSealedTask) tryToFindGroupDir() (string, string, int, error) {
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-	log.Debugf("trying to find group dir for %s unsealed", t.SectorID)
-	// search sealed at first
-	for _, cmp := range dstComputersMapSingleton.CMap {
-		for idx, p := range cmp.Paths {
-			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
-			_, err := os.Stat(dstSealed)
-			if err == nil {
-				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
-
-					var stat = new(syscall.Statfs_t)
-					_ = syscall.Statfs(p.Location, stat)
-					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
-						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
-						return "", "", 0, errors.New(move_common.NotEnoughSpace)
-					}
-					return p.Location, cmp.Ip, idx, nil
-				} else {
-					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
-					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
-				}
-			}
-		}
-	}
-
-	// search cache
-	for _, cmp := range dstComputersMapSingleton.CMap {
-		for idx, p := range cmp.Paths {
-			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
-			_, err := os.Stat(dstCache)
-			if err == nil {
-				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
-
-					var stat = new(syscall.Statfs_t)
-					_ = syscall.Statfs(p.Location, stat)
-					if stat.Bavail*uint64(stat.Bsize) <= uint64(t.TotalSize) {
-						log.Debugf("%v fond same group dir on %s, but disk has not enough space, will chose new dst", *t, p.Location)
-						return "", "", 0, errors.New(move_common.NotEnoughSpace)
-					}
-					return p.Location, cmp.Ip, idx, nil
-				} else {
-					log.Debugf("%v fond same group dir on %s, but too much threads for now, will copy later", *t, p.Location)
-					return "", "", 0, errors.New(move_common.FondGroupButTooMuchThread)
-				}
-			}
-		}
-	}
-
-	return "", "", 0, errors.New("no same group dir")
 }
