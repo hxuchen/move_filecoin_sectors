@@ -225,7 +225,7 @@ func startWork(cfg *Config) {
 	for {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
-			var t Operation
+			t := *new(Operation)
 			switch fileType {
 			case move_common.Cache:
 				realT := v.getInfo().(CacheTask)
