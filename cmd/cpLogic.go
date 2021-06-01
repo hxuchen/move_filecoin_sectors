@@ -225,7 +225,7 @@ func startWork(cfg *Config) {
 	for {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
-			t := *new(Operation)
+			t := v
 			switch fileType {
 			case move_common.Cache:
 				realT := v.getInfo().(CacheTask)
@@ -258,10 +258,10 @@ func startWork(cfg *Config) {
 						}
 						continue
 					}
-					t.setStatus(StatusOnWorking)
 					t.fullInfo(dst, dstIp)
 					srcIp := t.getSrcIp()
 					occupyThreads(dstPathIdxInComp, dstIp, srcIp)
+					t.setStatus(StatusOnWorking)
 					go t.startCopy(cfg, dstPathIdxInComp)
 				}
 			case StatusOnWorking:
