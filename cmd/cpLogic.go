@@ -226,17 +226,17 @@ func startWork(cfg *Config) {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
 			t := v
-			switch fileType {
-			case move_common.Cache:
-				realT := v.getInfo().(CacheTask)
-				t = &realT
-			case move_common.Sealed:
-				realT := v.getInfo().(SealedTask)
-				t = &realT
-			case move_common.UnSealed:
-				realT := v.getInfo().(UnSealedTask)
-				t = &realT
-			}
+			//switch fileType {
+			//case move_common.Cache:
+			//	realT := v.getInfo().(CacheTask)
+			//	t = &realT
+			//case move_common.Sealed:
+			//	realT := v.getInfo().(SealedTask)
+			//	t = &realT
+			//case move_common.UnSealed:
+			//	realT := v.getInfo().(UnSealedTask)
+			//	t = &realT
+			//}
 			if stop {
 				log.Warn(move_common.StoppedBySyscall)
 				waitingForAllTaskStop()
