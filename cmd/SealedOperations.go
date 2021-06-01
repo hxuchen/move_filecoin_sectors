@@ -131,21 +131,17 @@ func (t *SealedTask) setStatus(st string) {
 }
 
 func (t *SealedTask) startCopy(cfg *Config, dstPathIdxInComp int) {
-	sealedSrc := t.SealedSrc
-	sealedDst := t.SealedDst
-	dstIp := t.DstIp
-	srcIp := t.DstIp
 	log.Infof("start to copying %v", *t)
 	// copying sealed
-	err := copying(sealedSrc, sealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
-	freeThreads(dstPathIdxInComp, dstIp, srcIp)
+	err := copying(t.SealedSrc, t.SealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
+	freeThreads(dstPathIdxInComp, t.DstIp, t.SrcIp)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
 		} else {
 			log.Error(err)
 		}
-		os.Remove(sealedDst)
+		os.Remove(t.SealedDst)
 		t.setStatus(StatusOnWaiting)
 	} else {
 		t.setStatus(StatusDone)
