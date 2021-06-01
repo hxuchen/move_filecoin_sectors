@@ -54,15 +54,15 @@ type Operation interface {
 	tryToFindGroupDir() (string, string, error)
 }
 
-func getOneFreeDstComputer() (Computer, error) {
+func getOneFreeDstComputer() (*Computer, error) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		if cmp.CurrentThreads < cmp.LimitThread {
-			return cmp, nil
+			return &cmp, nil
 		}
 	}
-	return Computer{}, errors.New(move_common.NoDstSuitableForNow)
+	return nil, errors.New(move_common.NoDstSuitableForNow)
 }
 
 func copyDir(srcDir, dst string, cfg *Config) error {
