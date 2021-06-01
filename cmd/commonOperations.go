@@ -220,7 +220,6 @@ func occupyThreads(dstPath, dstIp, srcIp string) {
 		if p.Location == dstPath {
 			log.Debugf("occupyDstPathThread:before %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 			p.CurrentThreads++
-			dstComputersMapSingleton.CMap[dstIp] = dstComputer
 			log.Debugf("occupyDstPathThread:after %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 		}
 	}
@@ -253,13 +252,11 @@ func freeThreads(dstPath, dstIp, srcIp string) {
 	log.Debugf("releaseDstComputer:after %d,ip %s",
 		dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
 
-	//dstPath
 	// dstPath
 	for _, p := range dstComputer.Paths {
 		if p.Location == dstPath {
 			log.Debugf("occupyDstPathThread:before %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 			p.CurrentThreads--
-			dstComputersMapSingleton.CMap[dstIp] = dstComputer
 			log.Debugf("occupyDstPathThread:after %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 		}
 	}
