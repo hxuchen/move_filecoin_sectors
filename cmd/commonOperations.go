@@ -213,6 +213,7 @@ func occupyThreads(dstPath, dstIp, srcIp string) {
 	dstComputer := dstComputersMapSingleton.CMap[dstIp]
 	log.Debugf("occupyDstComputer:before %d,ip %s", dstComputer.CurrentThreads, dstIp)
 	dstComputer.CurrentThreads++
+	dstComputersMapSingleton.CMap[dstIp] = dstComputer
 	log.Debugf("occupyDstComputer:after %d,ip %s", dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
 
 	// dstPath
@@ -221,11 +222,11 @@ func occupyThreads(dstPath, dstIp, srcIp string) {
 			log.Debugf("occupyDstPathThread:before %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 			p.CurrentThreads++
 			dstComputer.Paths[idx] = p
+			dstComputersMapSingleton.CMap[dstIp] = dstComputer
 			log.Debugf("occupyDstPathThread:after %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 		}
 	}
 
-	dstComputersMapSingleton.CMap[dstIp] = dstComputer
 	srcComputersMapSingleton.CLock.Unlock()
 	dstComputersMapSingleton.CLock.Unlock()
 }
@@ -250,6 +251,7 @@ func freeThreads(dstPath, dstIp, srcIp string) {
 		log.Errorf("wrong thread num,required num is bigger than 0,but %d", dstComputer.CurrentThreads)
 	}
 	dstComputer.CurrentThreads--
+	dstComputersMapSingleton.CMap[dstIp] = dstComputer
 	log.Debugf("releaseDstComputer:after %d,ip %s",
 		dstComputersMapSingleton.CMap[dstIp].CurrentThreads, dstIp)
 
@@ -259,10 +261,10 @@ func freeThreads(dstPath, dstIp, srcIp string) {
 			log.Debugf("occupyDstPathThread:before %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 			p.CurrentThreads--
 			dstComputer.Paths[idx] = p
+			dstComputersMapSingleton.CMap[dstIp] = dstComputer
 			log.Debugf("occupyDstPathThread:after %d,ip %s,path %s", p.CurrentThreads, dstIp, p.Location)
 		}
 	}
-	dstComputersMapSingleton.CMap[dstIp] = dstComputer
 	srcComputersMapSingleton.CLock.Unlock()
 	dstComputersMapSingleton.CLock.Unlock()
 }
