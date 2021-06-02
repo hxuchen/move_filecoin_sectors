@@ -74,9 +74,6 @@ func (t *CacheTask) canDo() bool {
 func (t *CacheTask) getBestDst() (string, string, error) {
 	log.Debugf("finding best dst, %s", t.SectorID)
 
-	dstComputersMapSingleton.CLock.Lock()
-	defer dstComputersMapSingleton.CLock.Unlock()
-
 	dir, s, err := t.tryToFindGroupDir()
 	if err != nil {
 		if err.Error() == move_common.FondGroupButTooMuchThread {
