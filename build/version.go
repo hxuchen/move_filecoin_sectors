@@ -6,7 +6,7 @@
 
 package build
 
-const BaseVersion = "v2.1.0"
+const BaseVersion = "v2.1.1"
 
 var CurrentCommit string
 
