@@ -306,3 +306,8 @@ func (t *CacheTask) makeSrcPathSliceForCache() ([]string, error) {
 
 	return paths, nil
 }
+
+func (t *CacheTask)storageType(path string) StorageType {
+	// TODO logic
+	return NFS
+}

@@ -21,6 +21,14 @@ import (
 	"time"
 )
 
+type StorageType int
+
+const (
+	NFS StorageType = iota + 1
+	CEPH
+	QINIU
+)
+
 const (
 	StatusOnWaiting = "StatusOnWaiting"
 	StatusOnWorking = "StatusOnWorking"
@@ -52,6 +60,7 @@ type Operation interface {
 	checkIsExistedInDst(srcPaths []string, cfg *Config) bool
 	checkSourceSize() ([]string, error)
 	tryToFindGroupDir() (string, string, error)
+	storageType(path string) StorageType
 }
 
 func getOneFreeDstComputer() (*Computer, error) {

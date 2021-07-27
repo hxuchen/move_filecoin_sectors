@@ -260,3 +260,8 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 	}
 	return false
 }
+
+func (t *UnSealedTask)storageType(path string) StorageType {
+	// TODO logic
+	return NFS
+}
