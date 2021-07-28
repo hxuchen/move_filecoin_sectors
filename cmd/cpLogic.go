@@ -249,7 +249,8 @@ func startWork(cfg *Config) {
 					}
 					t.fullInfo(dst, dstIp)
 					srcIp := t.getSrcIp()
-					occupyThreads(dst, dstIp, srcIp)
+					srcPath := t.getSrcPath()
+					occupyThreads(dst, dstIp, srcIp, srcPath)
 					t.setStatus(StatusOnWorking)
 					go t.startCopy(cfg, dst)
 				}

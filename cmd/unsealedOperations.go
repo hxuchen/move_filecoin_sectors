@@ -57,7 +57,15 @@ func (t *UnSealedTask) canDo() bool {
 	srcComputersMapSingleton.CLock.Lock()
 	defer srcComputersMapSingleton.CLock.Unlock()
 	srcComputer := srcComputersMapSingleton.CMap[t.SrcIp]
-	if srcComputer.CurrentThreads < srcComputer.LimitThread {
+	var pathCurrentThread int64
+	var pathLimitThread int64
+	for _, loc := range srcComputer.Paths {
+		if t.OriSrc == loc.Location {
+			pathCurrentThread = loc.CurrentThreads
+			pathLimitThread = loc.SinglePathThreadLimit
+		}
+	}
+	if srcComputer.CurrentThreads < srcComputer.LimitThread && pathCurrentThread < pathLimitThread {
 		return true
 	}
 	return false
@@ -116,7 +124,7 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPath string) {
 	log.Infof("start to copying %v", *t)
 	// copying unsealed
 	err := copying(t.UnSealedSrc, t.UnSealedDst, cfg.SingleThreadMBPS, cfg.Chunks)
-	freeThreads(dstPath, t.DstIp, t.SrcIp)
+	freeThreads(dstPath, t.DstIp, t.SrcIp, t.OriSrc)
 	if err != nil {
 		if err.Error() == move_common.StoppedBySyscall {
 			log.Warn(err)
@@ -259,4 +267,10 @@ func (t *UnSealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool 
 		}
 	}
 	return false
+}
+
+func (t *UnSealedTask) getSrcPath() string {
+	taskListSingleton.TLock.Lock()
+	defer taskListSingleton.TLock.Unlock()
+	return t.OriSrc
 }

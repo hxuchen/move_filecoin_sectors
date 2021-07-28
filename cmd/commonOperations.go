@@ -43,6 +43,7 @@ type TaskList struct {
 type Operation interface {
 	getInfo() interface{}
 	getSrcIp() string
+	getSrcPath() string
 	canDo() bool
 	getBestDst() (string, string, error)
 	startCopy(cfg *Config, dstPath string)
@@ -199,13 +200,20 @@ func recordCalLogIfNeed(calFunc func(string, int64, int64) (string, error), file
 	return s, err
 }
 
-func occupyThreads(dstPath, dstIp, srcIp string) {
+func occupyThreads(dstPath, dstIp, srcIp, srcPath string) {
 	srcComputersMapSingleton.CLock.Lock()
 	dstComputersMapSingleton.CLock.Lock()
-	// srcComputer
+	// srcComputer && srcPath
 	srcComputer := srcComputersMapSingleton.CMap[srcIp]
 	log.Debugf("occupySrcComputer:before %d,ip %s", srcComputer.CurrentThreads, srcIp)
 	srcComputer.CurrentThreads++
+	// srcPath
+	for idx, loc := range srcComputer.Paths {
+		if srcPath == loc.Location {
+			loc.CurrentThreads++
+			srcComputer.Paths[idx] = loc
+		}
+	}
 	srcComputersMapSingleton.CMap[srcIp] = srcComputer
 	log.Debugf("occupySrcComputer:after %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
 
@@ -231,7 +239,7 @@ func occupyThreads(dstPath, dstIp, srcIp string) {
 	dstComputersMapSingleton.CLock.Unlock()
 }
 
-func freeThreads(dstPath, dstIp, srcIp string) {
+func freeThreads(dstPath, dstIp, srcIp, srcPath string) {
 	srcComputersMapSingleton.CLock.Lock()
 	dstComputersMapSingleton.CLock.Lock()
 	//srcComputer
@@ -241,6 +249,13 @@ func freeThreads(dstPath, dstIp, srcIp string) {
 		log.Errorf("wrong thread num,required num is bigger than 0,but %d", srcComputer.CurrentThreads)
 	}
 	srcComputer.CurrentThreads--
+	// srcPath
+	for idx, loc := range srcComputer.Paths {
+		if srcPath == loc.Location {
+			loc.CurrentThreads--
+			srcComputer.Paths[idx] = loc
+		}
+	}
 	srcComputersMapSingleton.CMap[srcIp] = srcComputer
 	log.Debugf("releaseSrcComputer:after %d,ip %s", srcComputersMapSingleton.CMap[srcIp].CurrentThreads, srcIp)
 
