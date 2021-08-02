@@ -40,7 +40,22 @@ type TaskList struct {
 	TLock *sync.Mutex
 }
 
+type GetSectorID interface {
+	getSectorID() string
+}
+
+var _ GetSectorID = &SectorID{}
+
+type SectorID struct {
+	ID string
+}
+
+func (sc *SectorID) getSectorID() string {
+	return sc.ID
+}
+
 type Operation interface {
+	GetSectorID
 	getInfo() interface{}
 	getSrcIp() string
 	getSrcPath() string

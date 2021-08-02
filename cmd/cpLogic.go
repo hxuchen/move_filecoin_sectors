@@ -7,13 +7,17 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"move_sectors/move_common"
+	"move_sectors/mv_utils"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -65,16 +69,12 @@ func initializeComputerMapSingleton(cfg *Config) error {
 	return nil
 }
 
-// init task list
-func initializeTaskList(cfg *Config) error {
-	log.Info("start to init tasks")
-	var threadChan = make(chan struct{}, runtime.NumCPU())
-	var lastOpDone = make(chan struct{}, 1)
+func initOps() ([]Operation, error) {
 	var ops = make([]Operation, 0)
 	for _, srcComputer := range srcComputersMapSingleton.CMap {
 		for _, src := range srcComputer.Paths {
 			if stop {
-				return errors.New("stopped by signal")
+				return nil, errors.New("stopped by signal")
 			}
 			switch fileType {
 			case move_common.Cache:
@@ -103,7 +103,7 @@ func initializeTaskList(cfg *Config) error {
 					return err
 				})
 				if err != nil {
-					return err
+					return nil, err
 				}
 			case move_common.Sealed:
 				sealedSrcDir := strings.TrimRight(src.Location, "/") + "/sealed"
@@ -130,7 +130,7 @@ func initializeTaskList(cfg *Config) error {
 					return err
 				})
 				if err != nil {
-					return err
+					return nil, err
 				}
 			case move_common.UnSealed:
 				unsealedSrcDir := strings.TrimRight(src.Location, "/") + "/unsealed"
@@ -159,18 +159,23 @@ func initializeTaskList(cfg *Config) error {
 					return err
 				})
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 	}
+	return ops, nil
 
+}
+
+func checkSourceSizeAndIsExistedInDst(ops []Operation, cfg *Config) error {
+	var threadChan = make(chan struct{}, runtime.NumCPU())
+	wg := sync.WaitGroup{}
 	if lenOps := len(ops); lenOps > 0 {
-		for i, v := range ops {
+		for _, v := range ops {
 			if stop {
 				return nil
 			}
-			idx := i
 			op := v
 			// checkSourceSize
 			srcPaths, err := op.checkSourceSize()
@@ -184,12 +189,11 @@ func initializeTaskList(cfg *Config) error {
 
 			select {
 			case threadChan <- struct{}{}:
+				wg.Add(1)
 				go func() {
 					defer func() {
 						<-threadChan
-						if idx == lenOps-1 {
-							lastOpDone <- struct{}{}
-						}
+						wg.Done()
 					}()
 					// check is already existed in dst
 					if op.checkIsExistedInDst(srcPaths, cfg) {
@@ -200,15 +204,31 @@ func initializeTaskList(cfg *Config) error {
 					taskListSingleton.TLock.Lock()
 					taskListSingleton.Ops = append(taskListSingleton.Ops, op)
 					taskListSingleton.TLock.Unlock()
-
 				}()
 			}
 		}
 	}
-	select {
-	case <-lastOpDone:
-		close(threadChan)
-		close(lastOpDone)
+
+	// wait all thread done
+	wg.Wait()
+	close(threadChan)
+	return nil
+}
+
+// init task list
+func initializeTaskList(cfg *Config) error {
+	log.Info("initializing tasks")
+
+	// make ops slice
+	ops, err := initOps()
+	if err != nil {
+		return err
+	}
+
+	// check source size && IsExistedInDst
+	err = checkSourceSizeAndIsExistedInDst(ops, cfg)
+	if err != nil {
+		return err
 	}
 	log.Info("all tasks init done")
 	return nil
@@ -222,6 +242,7 @@ func startWork(cfg *Config) {
 		return
 	}
 	since := time.Now()
+	lenSpecifiedMap := len(specifiedSectorsMap)
 	for {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
@@ -231,6 +252,13 @@ func startWork(cfg *Config) {
 				waitingForAllTaskStop()
 				return
 			}
+			// if manually specify sectors to copy,just copy specified sectors
+			if lenSpecifiedMap > 0 {
+				if _, ok := specifiedSectorsMap[t.getSectorID()]; !ok {
+					continue
+				}
+			}
+
 			switch t.getStatus() {
 			case StatusOnWaiting:
 				NotDoneNum++
@@ -325,4 +353,32 @@ func waitingForAllTaskStop() {
 		log.Infof("on working tasks remain %d", num)
 		time.Sleep(time.Second)
 	}
+}
+
+func makeSpecifiedSectorsMap(path string) error {
+	absPath, err := mv_utils.GetAbsPath(path)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(absPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	reader := bufio.NewReader(f)
+	for {
+		s, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return err
+			}
+		}
+		if _, ok := specifiedSectorsMap[string(s)]; ok {
+			return fmt.Errorf("doubled sectorID in sectors list file %s", absPath)
+		}
+		specifiedSectorsMap[string(s)] = struct{}{}
+	}
+	return nil
 }

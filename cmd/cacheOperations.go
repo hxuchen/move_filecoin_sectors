@@ -22,7 +22,7 @@ import (
 )
 
 type CacheTask struct {
-	SectorID      string
+	SectorID
 	SrcIp         string
 	OriSrc        string
 	CacheSrcDir   string
@@ -33,7 +33,9 @@ type CacheTask struct {
 	SealProofType string
 }
 
-func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask, error) {
+var _ Operation = &CacheTask{}
+
+func newCacheTask(singleCacheSrcDir, sId, oriSrc, srcIP string) (*CacheTask, error) {
 	var task = new(CacheTask)
 	// cal total cache size
 	var totalSize int64
@@ -52,7 +54,7 @@ func newCacheTask(singleCacheSrcDir, sealedId, oriSrc, srcIP string) (*CacheTask
 		return nil, nil
 	}
 	oriSrc = strings.TrimRight(oriSrc, "/")
-	task.SectorID = sealedId
+	task.SectorID.ID = sId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
 	task.CacheSrcDir = singleCacheSrcDir
@@ -153,7 +155,7 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, error) {
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
+			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.getSectorID()
 			_, err := os.Stat(dstSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
@@ -176,7 +178,7 @@ func (t *CacheTask) tryToFindGroupDir() (string, string, error) {
 	// search unSealed
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.SectorID
+			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.getSectorID()
 			_, err := os.Stat(dstUnSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
