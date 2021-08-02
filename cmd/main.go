@@ -74,6 +74,7 @@ var CpCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:     "UnSealed",
+			Aliases:  []string{"U", "u"},
 			Usage:    "Declare whether to copying unsealed files",
 			Required: false,
 			Hidden:   false,
@@ -81,6 +82,7 @@ var CpCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:     "Sealed",
+			Aliases:  []string{"S", "s"},
 			Usage:    "Declare whether to copying Sealed files",
 			Required: false,
 			Hidden:   false,
@@ -88,10 +90,18 @@ var CpCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:     "Cache",
+			Aliases:  []string{"C", "c"},
 			Usage:    "Declare whether to copying cache files",
 			Required: false,
 			Hidden:   false,
 			Value:    false,
+		},
+		&cli.StringFlag{
+			Name:     "SectorListFile",
+			Aliases:  []string{"SF", "sf"},
+			Usage:    "special the file path which contains sectors list you want to copy",
+			Required: false,
+			Hidden:   false,
 		},
 		&cli.BoolFlag{
 			Name:     "SkipSourceError",
