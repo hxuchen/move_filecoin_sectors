@@ -19,7 +19,7 @@ import (
 )
 
 type UnSealedTask struct {
-	SectorID      string
+	SectorID
 	SrcIp         string
 	OriSrc        string
 	DstIp         string
@@ -30,7 +30,9 @@ type UnSealedTask struct {
 	SealProofType string
 }
 
-func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask, error) {
+var _ Operation = &UnSealedTask{}
+
+func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sId string) (*UnSealedTask, error) {
 	var task = new(UnSealedTask)
 	oriSrc = strings.TrimRight(oriSrc, "/")
 
@@ -44,7 +46,7 @@ func newUnSealedTask(unSealedSrc, oriSrc, srcIP, sectorID string) (*UnSealedTask
 		return nil, nil
 	}
 
-	task.SectorID = sectorID
+	task.SectorID.ID = sId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
 	task.UnSealedSrc = unSealedSrc
@@ -142,11 +144,11 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPath string) {
 func (t *UnSealedTask) tryToFindGroupDir() (string, string, error) {
 	dstComputersMapSingleton.CLock.Lock()
 	defer dstComputersMapSingleton.CLock.Unlock()
-	log.Debugf("trying to find group dir for %s unsealed", t.SectorID)
+	log.Debugf("trying to find group dir for %s unsealed", t.getSectorID())
 	// search sealed at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.SectorID
+			dstSealed := strings.TrimRight(p.Location, "/") + "/sealed/" + t.getSectorID()
 			_, err := os.Stat(dstSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
@@ -169,7 +171,7 @@ func (t *UnSealedTask) tryToFindGroupDir() (string, string, error) {
 	// search cache
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
+			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.getSectorID()
 			_, err := os.Stat(dstCache)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {

@@ -33,6 +33,7 @@ var (
 		Ops:   make([]Operation, 0),
 		TLock: new(sync.Mutex),
 	}
+	specifiedSectorsMap map[string]struct{}
 )
 
 /*
@@ -105,7 +106,7 @@ var CpCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:     "SkipSourceError",
-			Usage:    "Declare whether to copying cache files",
+			Usage:    "Declare whether to keep running process and skip files with something wrong",
 			Required: false,
 			Hidden:   false,
 			Value:    false,
@@ -114,10 +115,10 @@ var CpCmd = &cli.Command{
 
 	Action: func(cctx *cli.Context) error {
 		log.Infof("startWork move_sector,version:%s", build.GetVersion())
-		lock, err2 := createFileLock(os.TempDir(), "move_sectors.lock")
-		if err2 != nil {
-			log.Error(err2)
-			return err2
+		lock, err := createFileLock(os.TempDir(), "move_sectors.lock")
+		if err != nil {
+			log.Error(err)
+			return err
 		}
 
 		if lock != nil {
@@ -147,6 +148,15 @@ var CpCmd = &cli.Command{
 
 		if cctx.Bool("SkipSourceError") {
 			skipSourceError = true
+		}
+
+		// if SectorListFile set,read the file and add sectors into a map
+		if slf := cctx.String("SectorListFile"); slf != "" {
+			specifiedSectorsMap = make(map[string]struct{})
+			err := makeSpecifiedSectorsMap(slf)
+			if err != nil {
+				return err
+			}
 		}
 
 		// load config

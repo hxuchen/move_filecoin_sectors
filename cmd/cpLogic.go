@@ -7,9 +7,12 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"move_sectors/move_common"
+	"move_sectors/mv_utils"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -214,7 +217,7 @@ func checkSourceSizeAndIsExistedInDst(ops []Operation, cfg *Config) error {
 
 // init task list
 func initializeTaskList(cfg *Config) error {
-	log.Info("start to init tasks")
+	log.Info("initializing tasks")
 
 	// make ops slice
 	ops, err := initOps()
@@ -239,6 +242,7 @@ func startWork(cfg *Config) {
 		return
 	}
 	since := time.Now()
+	lenSpecifiedMap := len(specifiedSectorsMap)
 	for {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
@@ -248,6 +252,13 @@ func startWork(cfg *Config) {
 				waitingForAllTaskStop()
 				return
 			}
+			// if manually specify sectors to copy,just copy specified sectors
+			if lenSpecifiedMap > 0 {
+				if _, ok := specifiedSectorsMap[t.getSectorID()]; !ok {
+					continue
+				}
+			}
+
 			switch t.getStatus() {
 			case StatusOnWaiting:
 				NotDoneNum++
@@ -342,4 +353,32 @@ func waitingForAllTaskStop() {
 		log.Infof("on working tasks remain %d", num)
 		time.Sleep(time.Second)
 	}
+}
+
+func makeSpecifiedSectorsMap(path string) error {
+	absPath, err := mv_utils.GetAbsPath(path)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(absPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	reader := bufio.NewReader(f)
+	for {
+		s, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return err
+			}
+		}
+		if _, ok := specifiedSectorsMap[string(s)]; ok {
+			return fmt.Errorf("doubled sectorID in sectors list file %s", absPath)
+		}
+		specifiedSectorsMap[string(s)] = struct{}{}
+	}
+	return nil
 }

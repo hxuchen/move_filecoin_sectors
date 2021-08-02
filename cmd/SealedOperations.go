@@ -18,8 +18,10 @@ import (
 	"time"
 )
 
+//type SectorID string
+
 type SealedTask struct {
-	SectorID      string
+	SectorID
 	SrcIp         string
 	OriSrc        string
 	SealedSrc     string
@@ -30,7 +32,9 @@ type SealedTask struct {
 	SealProofType string
 }
 
-func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, error) {
+var _ Operation = &SealedTask{}
+
+func newSealedTask(sealedSrc, sId, oriSrc, srcIP string) (*SealedTask, error) {
 	var task = new(SealedTask)
 	oriSrc = strings.TrimRight(oriSrc, "/")
 
@@ -46,7 +50,7 @@ func newSealedTask(sealedSrc, sealedId, oriSrc, srcIP string) (*SealedTask, erro
 		return nil, nil
 	}
 
-	task.SectorID = sealedId
+	task.SectorID.ID = sId
 	task.SrcIp = srcIP
 	task.OriSrc = oriSrc
 	task.SealedSrc = sealedSrc
@@ -147,7 +151,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, error) {
 	// search cache at first
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.SectorID
+			dstCache := strings.TrimRight(p.Location, "/") + "/cache/" + t.getSectorID()
 			_, err := os.Stat(dstCache)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
@@ -170,7 +174,7 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, error) {
 	// search unSealed
 	for _, cmp := range dstComputersMapSingleton.CMap {
 		for _, p := range cmp.Paths {
-			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.SectorID
+			dstUnSealed := strings.TrimRight(p.Location, "/") + "/unsealed/" + t.getSectorID()
 			_, err := os.Stat(dstUnSealed)
 			if err == nil {
 				if cmp.CurrentThreads < cmp.LimitThread && p.CurrentThreads < p.SinglePathThreadLimit {
@@ -193,6 +197,10 @@ func (t *SealedTask) tryToFindGroupDir() (string, string, error) {
 
 	return "", "", errors.New("no same group dir")
 }
+
+//func (t *SealedTask) getSectorId() string {
+//
+//}
 
 func (t *SealedTask) getInfo() interface{} {
 	taskListSingleton.TLock.Lock()
