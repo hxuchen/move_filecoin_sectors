@@ -334,7 +334,7 @@ func startWork(cfg *Config) {
 		}
 		time.Sleep(time.Second * 5)
 	}
-	log.Info("all task done")
+	log.Infof("all task done for %s file", fileType)
 }
 
 func waitingForAllTaskStop() {
