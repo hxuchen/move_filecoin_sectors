@@ -172,11 +172,18 @@ func checkSourceSizeAndIsExistedInDst(ops []Operation, cfg *Config) error {
 	var threadChan = make(chan struct{}, runtime.NumCPU())
 	wg := sync.WaitGroup{}
 	if lenOps := len(ops); lenOps > 0 {
+		lenSpecifiedMap := len(specifiedSectorsMap)
 		for _, v := range ops {
 			if stop {
 				return nil
 			}
 			op := v
+			// if manually specify sectors to copy,just check and copy specified sectors
+			if lenSpecifiedMap > 0 {
+				if _, ok := specifiedSectorsMap[op.getSectorID()]; !ok {
+					continue
+				}
+			}
 			// checkSourceSize
 			srcPaths, err := op.checkSourceSize()
 			if err != nil {
@@ -242,7 +249,7 @@ func startWork(cfg *Config) {
 		return
 	}
 	since := time.Now()
-	lenSpecifiedMap := len(specifiedSectorsMap)
+	//lenSpecifiedMap := len(specifiedSectorsMap)
 	for {
 		NotDoneNum := 0
 		for _, v := range taskListSingleton.Ops {
@@ -253,11 +260,11 @@ func startWork(cfg *Config) {
 				return
 			}
 			// if manually specify sectors to copy,just copy specified sectors
-			if lenSpecifiedMap > 0 {
-				if _, ok := specifiedSectorsMap[t.getSectorID()]; !ok {
-					continue
-				}
-			}
+			//if lenSpecifiedMap > 0 {
+			//	if _, ok := specifiedSectorsMap[t.getSectorID()]; !ok {
+			//		continue
+			//	}
+			//}
 
 			switch t.getStatus() {
 			case StatusOnWaiting:
