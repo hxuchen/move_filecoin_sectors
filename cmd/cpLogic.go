@@ -339,7 +339,11 @@ func startWork(cfg *Config) {
 				}
 			}
 		}
-		time.Sleep(time.Second * 5)
+		if fileType != move_common.Cache {
+			time.Sleep(time.Second * 10)
+		} else {
+			time.Sleep(time.Second * 2)
+		}
 	}
 	log.Infof("all task done for %s file", fileType)
 }
