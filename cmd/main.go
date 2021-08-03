@@ -151,6 +151,9 @@ var CpCmd = &cli.Command{
 			if err != nil {
 				return err
 			}
+			if ls := len(specifiedSectorsMap); ls > 0 {
+				log.Infof("manually specify sectors to copy, nums: %d", ls)
+			}
 		}
 
 		// load config
