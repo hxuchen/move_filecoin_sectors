@@ -259,12 +259,6 @@ func startWork(cfg *Config) {
 				waitingForAllTaskStop()
 				return
 			}
-			// if manually specify sectors to copy,just copy specified sectors
-			//if lenSpecifiedMap > 0 {
-			//	if _, ok := specifiedSectorsMap[t.getSectorID()]; !ok {
-			//		continue
-			//	}
-			//}
 
 			switch t.getStatus() {
 			case StatusOnWaiting:

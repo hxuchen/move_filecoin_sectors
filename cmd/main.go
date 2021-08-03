@@ -36,12 +36,6 @@ var (
 	specifiedSectorsMap map[string]struct{}
 )
 
-/*
-	cmd include
-		--srcPath special the file that contains the source paths
-		--dstPath  transfer target location(required)
-		--minerIP special the miner address
-*/
 func main() {
 	lotuslog.SetupLogLevels()
 
