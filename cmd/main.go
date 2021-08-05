@@ -36,12 +36,6 @@ var (
 	specifiedSectorsMap map[string]struct{}
 )
 
-/*
-	cmd include
-		--srcPath special the file that contains the source paths
-		--dstPath  transfer target location(required)
-		--minerIP special the miner address
-*/
 func main() {
 	lotuslog.SetupLogLevels()
 
@@ -114,7 +108,7 @@ var CpCmd = &cli.Command{
 	},
 
 	Action: func(cctx *cli.Context) error {
-		log.Infof("startWork move_sector,version:%s", build.GetVersion())
+		log.Infof("run move_sector process,version:%s", build.GetVersion())
 		lock, err := createFileLock(os.TempDir(), "move_sectors.lock")
 		if err != nil {
 			log.Error(err)
@@ -145,7 +139,7 @@ var CpCmd = &cli.Command{
 		if cctx.Bool("Cache") {
 			fileType = move_common.Cache
 		}
-
+		log.Infof("will copy %s files", fileType)
 		if cctx.Bool("SkipSourceError") {
 			skipSourceError = true
 		}
@@ -156,6 +150,9 @@ var CpCmd = &cli.Command{
 			err := makeSpecifiedSectorsMap(slf)
 			if err != nil {
 				return err
+			}
+			if ls := len(specifiedSectorsMap); ls > 0 {
+				log.Infof("manually specify sectors to copy, nums: %d", ls)
 			}
 		}
 
@@ -176,12 +173,13 @@ var CpCmd = &cli.Command{
 		signal.Notify(stopSignal, syscall.SIGTERM, syscall.SIGINT)
 		go func() {
 			select {
-			case <-stopSignal:
+			case si := <-stopSignal:
 				stop = true
+				log.Warn("stopped by signal %+v", si)
 			}
 		}()
 
-		log.Info("startWork to copying")
+		log.Info("startWork to copy")
 		startWork(config)
 		log.Info("mv_sectors exited")
 		return nil

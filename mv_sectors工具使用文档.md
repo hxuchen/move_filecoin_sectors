@@ -34,7 +34,7 @@ sudo make install
 
 2. 部署方式
 
-   整个数据流程走向为：源服务器——>中转服务器——>目标服务器
+   整个数据流程走向为：源服务器——>中转服务器(可以是源服务器自身)——>目标服务器
 
    1. 工具需要一个带宽较大的中转服务器，配置进默认为/home/$USER/mv_sectors.yaml文件中（也可以用--path指定配置文件路径）。
    2. 工具部署在中转服务器上
@@ -47,27 +47,35 @@ sudo make install
    - 拷贝cache文件：
 
    ```shell
-   nohup move_sectors run --Cache >> ~/move_sectors.log &
+   nohup move_sectors run --Cache(-C/-c) >> ~/move_sectors.log &
    # 或者指定配置文件
-   nohup move_sectors run --Cache --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --Cache(-C/-c) --path configPath >> ~/move_sectors.log &
    ```
 
    - 拷贝sealed文件
 
    ```shell
-   nohup move_sectors run --Sealed >> ~/move_sectors.log &
+   nohup move_sectors run --Sealed(-S/-s) >> ~/move_sectors.log &
    # 或者指定配置文件
-   nohup move_sectors run --Sealed --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --Sealed(-S/-s) --path configPath >> ~/move_sectors.log &
    ```
 
-   
-
    - 拷贝unsealed文件
+
+   ```shell
+   nohup move_sectors run --UnSealed(-U/-u) >> ~/move_sectors.log &
+   # 或者指定配置文件
+   nohup move_sectors run --UnSealed(-U/-u) --path configPath >> ~/move_sectors.log &
+   ```
+   
+   - 指定sector拷贝
    
    ```shell
-   nohup move_sectors run --UnSealed >> ~/move_sectors.log &
+   # 首先将需要拷贝的sectorID以一行一个的形式写入文件，使用--SectorListFile(-SF/-sf)指定该文件路径
+   # 以sealed文件为例：
+   nohup move_sectors run --Sealed(-S/-s) --SectorListFile(-SF/-sf) $FILEPATH >> ~/move_sectors.log &
    # 或者指定配置文件
-   nohup move_sectors run --UnSealed --path configPath >> ~/move_sectors.log &
+   nohup move_sectors run --Sealed(-S/-s) --SectorListFile(-SF/-sf) $FILEPATH --path configPath >> ~/move_sectors.log &
    ```
    
    - 使用以下环境变量可以打印详细日志
