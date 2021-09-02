@@ -106,6 +106,7 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 func copying(src, dst string,  singleThreadMBPS int, chunks int64) (err error) {
 
 	if src != dst {
+		//fix path with QINIU
 		middlePath := dst + ".tmp"
 		if err = cp(src, middlePath, singleThreadMBPS, chunks); err != nil {
 			return err
