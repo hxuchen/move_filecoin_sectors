@@ -7,13 +7,16 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"golang.org/x/xerrors"
 	"io"
 	"math"
 	"move_sectors/move_common"
 	"move_sectors/mv_utils"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -100,7 +103,24 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 	return err
 }
 
-func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
+func copying(src, dst string,  singleThreadMBPS int, chunks int64) (err error) {
+
+	if src != dst {
+		//fix path with QINIU
+		middlePath := dst + ".tmp"
+		if err = cp(src, middlePath, singleThreadMBPS, chunks); err != nil {
+			return err
+		}
+
+		if err = moveFile(middlePath, dst); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func cp(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 	const BufferSize = 1 * 1024 * 1024
 	buf := make([]byte, BufferSize)
 
@@ -163,6 +183,17 @@ func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 		}
 	}
 	return
+}
+
+func moveFile(from, to string) error {
+	var errOut bytes.Buffer
+	cmd := exec.Command("/usr/bin/env", "mv", from, to) // nolint
+	cmd.Stderr = &errOut
+	if err := cmd.Run(); err != nil {
+		return xerrors.Errorf("exec mv (stderr: %s): %w", strings.TrimSpace(errOut.String()), err)
+	}
+
+	return nil
 }
 
 func getStandSize(proofType, path string) (int64, error) {
