@@ -103,7 +103,7 @@ func copyDir(srcDir, dst string, cfg *Config) error {
 	return err
 }
 
-func copying(src, dst string,  singleThreadMBPS int, chunks int64) (err error) {
+func copying(src, dst string, singleThreadMBPS int, chunks int64) (err error) {
 
 	if src != dst {
 		//fix path with QINIU
@@ -240,9 +240,9 @@ func compareSize(path string, base int64, delta int) error {
 }
 
 func recordCalLogIfNeed(calFunc func(string, int64, int64) (string, error), filePath string, size int64, chunks int64) (string, error) {
-	//since := time.Now()
+	since := time.Now()
 	s, err := calFunc(filePath, size, chunks)
-	//log.Debugf("cal %s calHash cost %v", filePath, time.Now().Sub(since))
+	log.Debugf("cal %s calHash cost %v, result: %s", filePath, time.Now().Sub(since), s)
 	return s, err
 }
 
