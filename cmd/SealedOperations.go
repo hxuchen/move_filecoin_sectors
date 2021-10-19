@@ -263,6 +263,8 @@ func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 						} else {
 							tag = tag * 0
 						}
+					} else {
+						tag = tag * 0
 					}
 				} else {
 					tag = tag * 0
