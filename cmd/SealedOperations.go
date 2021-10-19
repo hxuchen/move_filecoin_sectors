@@ -259,15 +259,15 @@ func (t *SealedTask) checkIsExistedInDst(srcPaths []string, cfg *Config) bool {
 						srcHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, singleSealedPath, statSrc.Size(), cfg.Chunks)
 						dstHash, _ := recordCalLogIfNeed(mv_utils.CalFileHash, dst, statDst.Size(), cfg.Chunks)
 						if srcHash == dstHash && srcHash != "" && dstHash != "" {
-							tag = tag * 1
+							tag = 1
 						} else {
-							tag = tag * 0
+							tag = 0
 						}
 					} else {
-						tag = tag * 0
+						tag = 0
 					}
 				} else {
-					tag = tag * 0
+					tag = 0
 				}
 			}
 			if tag == 1 {
