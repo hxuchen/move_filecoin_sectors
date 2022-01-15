@@ -134,6 +134,7 @@ func (t *UnSealedTask) startCopy(cfg *Config, dstPath string) {
 			log.Error(err)
 		}
 		os.Remove(t.UnSealedDst)
+		os.Remove(t.UnSealedDst + ".tmp")
 		t.setStatus(StatusOnWaiting)
 	} else {
 		t.setStatus(StatusDone)
