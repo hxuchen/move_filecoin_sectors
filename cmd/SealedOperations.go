@@ -138,7 +138,11 @@ func (t *SealedTask) startCopy(cfg *Config, dstPath string) {
 		}
 		os.Remove(t.SealedDst)
 		os.Remove(t.SealedDst + ".tmp")
-		t.setStatus(StatusOnWaiting)
+		if os.Getenv("SKIP_FAILED") == "1" {
+			t.setStatus(StatusDone)
+		} else {
+			t.setStatus(StatusOnWaiting)
+		}
 	} else {
 		t.setStatus(StatusDone)
 		log.Infof("task %v done", *t)

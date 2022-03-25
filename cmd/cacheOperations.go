@@ -141,7 +141,11 @@ func (t *CacheTask) startCopy(cfg *Config, dstPath string) {
 			log.Error(err)
 		}
 		os.RemoveAll(t.CacheDstDir)
-		t.setStatus(StatusOnWaiting)
+		if os.Getenv("SKIP_FAILED") == "1" {
+			t.setStatus(StatusDone)
+		} else {
+			t.setStatus(StatusOnWaiting)
+		}
 	} else {
 		t.setStatus(StatusDone)
 		log.Infof("task %v done", *t)
